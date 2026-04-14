@@ -1,10 +1,10 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 5.5
 import PackageDescription
 
 let package = Package(
     name: "Kakezan",
     platforms: [
-        .iOS("16.0")
+        .iOS("15.2")
     ],
     targets: [
         .executableTarget(
