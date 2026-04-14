@@ -24,14 +24,8 @@ struct ContentView: View {
                             .foregroundColor(.secondary)
                         NumberInputView(value: $secondNumber)
                     }
-                    .onChange(of: firstNumber) { _, _ in
-                        result = nil
-                        showDetail = false
-                    }
-                    .onChange(of: secondNumber) { _, _ in
-                        result = nil
-                        showDetail = false
-                    }
+                    .onChange(of: firstNumber) { _, _ in result = nil; showDetail = false }
+                    .onChange(of: secondNumber) { _, _ in result = nil; showDetail = false }
 
                     Button {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
@@ -48,8 +42,11 @@ struct ContentView: View {
                     }
                     .buttonStyle(.plain)
 
-                    if showDetail, let result = result {
-                        StepByStepView(a: firstNumber, b: secondNumber, result: result)
+                    if showDetail, let r = result {
+                        StepByStepView(a: firstNumber, b: secondNumber, result: r)
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+
+                        MentalMathView(a: firstNumber, b: secondNumber, result: r)
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
 
@@ -61,27 +58,25 @@ struct ContentView: View {
     }
 }
 
-// MARK: - 途中経過ビュー
+// MARK: - 筆算ステップ
 
 struct StepByStepView: View {
     let a: Int
     let b: Int
     let result: Int
 
-    var a1: Int { a / 10 }   // aの十の位
-    var a0: Int { a % 10 }   // aの一の位
-    var b1: Int { b / 10 }   // bの十の位
-    var b0: Int { b % 10 }   // bの一の位
+    var a1: Int { a / 10 }
+    var a0: Int { a % 10 }
+    var b1: Int { b / 10 }
+    var b0: Int { b % 10 }
 
-    var p1: Int { a1 * 10 * b1 * 10 }  // 十×十
-    var p2: Int { a1 * 10 * b0 }        // 十×一
-    var p3: Int { a0 * b1 * 10 }        // 一×十
-    var p4: Int { a0 * b0 }             // 一×一
+    var p1: Int { a1 * 10 * b1 * 10 }
+    var p2: Int { a1 * 10 * b0 }
+    var p3: Int { a0 * b1 * 10 }
+    var p4: Int { a0 * b0 }
 
     var body: some View {
         VStack(spacing: 16) {
-
-            // STEP 1: 分解
             StepCard(number: 1, title: "十の位と一の位に分解") {
                 HStack(spacing: 24) {
                     DecomposeView(number: a, tens: a1, ones: a0, color: .blue)
@@ -93,37 +88,15 @@ struct StepByStepView: View {
                 .frame(maxWidth: .infinity)
             }
 
-            // STEP 2: 4つの部分積
             StepCard(number: 2, title: "それぞれ掛け合わせる") {
                 VStack(spacing: 10) {
-                    PartialRow(
-                        lhs: "\(a1 * 10) × \(b1 * 10)",
-                        hint: "（十の位 × 十の位）",
-                        value: p1,
-                        color: .purple
-                    )
-                    PartialRow(
-                        lhs: "\(a1 * 10) × \(b0)",
-                        hint: "（十の位 × 一の位）",
-                        value: p2,
-                        color: .teal
-                    )
-                    PartialRow(
-                        lhs: "\(a0) × \(b1 * 10)",
-                        hint: "（一の位 × 十の位）",
-                        value: p3,
-                        color: .teal
-                    )
-                    PartialRow(
-                        lhs: "\(a0) × \(b0)",
-                        hint: "（一の位 × 一の位）",
-                        value: p4,
-                        color: .red
-                    )
+                    PartialRow(lhs: "\(a1 * 10) × \(b1 * 10)", hint: "（十の位 × 十の位）", value: p1, color: .purple)
+                    PartialRow(lhs: "\(a1 * 10) × \(b0)",      hint: "（十の位 × 一の位）", value: p2, color: .teal)
+                    PartialRow(lhs: "\(a0) × \(b1 * 10)",      hint: "（一の位 × 十の位）", value: p3, color: .teal)
+                    PartialRow(lhs: "\(a0) × \(b0)",            hint: "（一の位 × 一の位）", value: p4, color: .red)
                 }
             }
 
-            // STEP 3: 合計
             StepCard(number: 3, title: "すべて足し合わせる") {
                 VStack(spacing: 12) {
                     HStack(spacing: 8) {
@@ -136,9 +109,7 @@ struct StepByStepView: View {
                         SumChip(value: p4, color: .red)
                     }
                     .minimumScaleFactor(0.5)
-
                     Divider()
-
                     Text("\(result)")
                         .font(.system(size: 80, weight: .bold, design: .rounded))
                         .foregroundColor(.blue)
@@ -149,7 +120,111 @@ struct StepByStepView: View {
     }
 }
 
-// MARK: - パーツ
+// MARK: - 暗算セクション
+
+struct MentalMathView: View {
+    let a: Int
+    let b: Int
+    let result: Int
+
+    // 方法①: 2段階計算
+    var bOnes: Int { b % 10 }
+    var bTens: Int { (b / 10) * 10 }
+    var partOnes: Int { a * bOnes }
+    var partTens: Int { a * bTens }
+
+    // 方法②: 丸め法（b % 10 >= 5 なら切り上げ、そうでなければ切り捨て）
+    var bRounded: Int {
+        let lower = (b / 10) * 10
+        let upper = lower + 10
+        return (b % 10 >= 5) ? upper : lower
+    }
+    var bDiff: Int { b - bRounded }          // 負 = 切り上げ済み、正 = 切り捨て済み
+    var roundedProduct: Int { a * bRounded }
+    var adjustAmount: Int { abs(a * bDiff) }
+    var isRoundedUp: Bool { bRounded > b }   // 切り上げなら結果から引く
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: "brain.head.profile")
+                    .foregroundColor(.orange)
+                    .font(.title2)
+                Text("暗算のコツ")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.orange)
+            }
+            .padding(.top, 4)
+
+            // 方法①: 2段階計算
+            MentalCard(title: "方法①　2段階で計算する") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("一の位 → 十の位 の順に掛けて、最後に足す")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+
+                    MentalRow(circled: "①", formula: "\(a) × \(bOnes)（一の位）", value: partOnes, color: .orange)
+                    MentalRow(circled: "②", formula: "\(a) × \(bTens)（十の位）", value: partTens, color: .green)
+
+                    Divider()
+                    HStack {
+                        Text("③ 合計")
+                            .font(.system(size: 15, weight: .semibold))
+                        Spacer()
+                        Text("\(partOnes) + \(partTens) = \(result)")
+                            .font(.system(size: 18, weight: .bold, design: .monospaced))
+                            .foregroundColor(.blue)
+                    }
+                }
+            }
+
+            // 方法②: 丸め法（b が 10 の倍数の場合は不要）
+            if bDiff != 0 {
+                MentalCard(title: "方法②　キリのいい数に丸めて補正する") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        let diffAbs = abs(bDiff)
+                        Text(isRoundedUp
+                            ? "\(b) を \(bRounded) に切り上げて計算し、余分を引く"
+                            : "\(b) を \(bRounded) に切り捨てて計算し、不足を足す")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+
+                        MentalRow(circled: "①", formula: "\(a) × \(bRounded)", value: roundedProduct, color: .purple)
+
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("② 補正")
+                                    .font(.system(size: 15, weight: .semibold))
+                                Text(isRoundedUp
+                                    ? "\(bRounded) − \(b) = \(diffAbs)  →  \(a) × \(diffAbs) = \(adjustAmount) を引く"
+                                    : "\(b) − \(bRounded) = \(diffAbs)  →  \(a) × \(diffAbs) = \(adjustAmount) を足す")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Text(isRoundedUp ? "−\(adjustAmount)" : "+\(adjustAmount)")
+                                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                                .foregroundColor(isRoundedUp ? .red : .green)
+                        }
+
+                        Divider()
+                        HStack {
+                            Text("③ 合計")
+                                .font(.system(size: 15, weight: .semibold))
+                            Spacer()
+                            let op = isRoundedUp ? "−" : "+"
+                            Text("\(roundedProduct) \(op) \(adjustAmount) = \(result)")
+                                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - 共通パーツ
 
 struct StepCard<Content: View>: View {
     let number: Int
@@ -176,6 +251,46 @@ struct StepCard<Content: View>: View {
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
+    }
+}
+
+struct MentalCard<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 15, weight: .bold))
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(Color(.systemBackground))
+        .cornerRadius(14)
+        .shadow(color: .black.opacity(0.06), radius: 5, x: 0, y: 2)
+    }
+}
+
+struct MentalRow: View {
+    let circled: String
+    let formula: String
+    let value: Int
+    let color: Color
+
+    var body: some View {
+        HStack {
+            Text(circled)
+                .font(.system(size: 15, weight: .bold))
+                .frame(width: 24)
+            Text(formula)
+                .font(.system(size: 15, design: .monospaced))
+                .foregroundColor(.secondary)
+            Spacer()
+            Text("= \(value)")
+                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                .foregroundColor(color)
+        }
     }
 }
 
@@ -240,8 +355,6 @@ struct SumChip: View {
             .cornerRadius(8)
     }
 }
-
-// MARK: - 数字入力
 
 struct NumberInputView: View {
     @Binding var value: Int
