@@ -236,6 +236,17 @@ struct MentalMathView: View {
         return min(a2 + b2, a5 + b5) > min(a2, a5) + min(b2, b5)
     }
 
+    // キャッシュプロパティ（型推論コスト削減）
+    private var factorsAStr: String { factorsA.map { String($0) }.joined(separator: " × ") }
+    private var factorsBStr: String { factorsB.map { String($0) }.joined(separator: " × ") }
+    private var factorsACompact: String { factorsA.map { String($0) }.joined(separator: "×") }
+    private var factorsBCompact: String { factorsB.map { String($0) }.joined(separator: "×") }
+    private var factorTargetStr: String { factorFactors.map { String($0) }.joined(separator: " × ") }
+    private var allFactorsStr: String { allPrimeFactors.map { String($0) }.joined(separator: " × ") }
+    private var regroupedStr: String { regrouped.map { String($0) }.joined(separator: " × ") }
+    private var regroupBase: Int { regrouped.first ?? result }
+    private var regroupRoundCount: Int { regrouped.filter { $0 % 10 == 0 }.count }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
@@ -247,365 +258,267 @@ struct MentalMathView: View {
                     .foregroundColor(.orange)
             }
             .padding(.top, 4)
+            method1Card
+            if bDiff != 0 { method2Card }
+            if isOmiyageApplicable { method3Card }
+            method4Card
+            if isFactorMethodApplicable { method5Card }
+            if isRegroupApplicable { method6Card }
+        }
+    }
 
-            MentalCard(title: "方法①　2段階で計算する") {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("一の位 → 十の位 の順に掛けて、最後に足す")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                    MentalRow(circled: "①", formula: "\(a) × \(bOnes)（一の位）", value: partOnes, color: .orange)
-                    MentalRow(circled: "②", formula: "\(a) × \(bTens)（十の位）", value: partTens, color: .green)
-                    Divider()
-                    HStack {
-                        Text("③ 合計")
-                            .font(.system(size: 15, weight: .semibold))
-                        Spacer()
-                        Text("\(partOnes) + \(partTens) = \(result)")
-                            .font(.system(size: 18, weight: .bold, design: .monospaced))
-                            .foregroundColor(.blue)
-                    }
+    // MARK: 各方法カード（独立プロパティで型推論コストを分散）
+
+    private var method1Card: some View {
+        MentalCard(title: "方法①　2段階で計算する") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("一の位 → 十の位 の順に掛けて、最後に足す")
+                    .font(.system(size: 13)).foregroundColor(.secondary)
+                MentalRow(circled: "①", formula: "\(a) × \(bOnes)（一の位）", value: partOnes, color: .orange)
+                MentalRow(circled: "②", formula: "\(a) × \(bTens)（十の位）", value: partTens, color: .green)
+                Divider()
+                HStack {
+                    Text("③ 合計").font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                    Text("\(partOnes) + \(partTens) = \(result)")
+                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .foregroundColor(.blue)
                 }
             }
+        }
+    }
 
-            if bDiff != 0 {
-                MentalCard(title: "方法②　キリのいい数に丸めて補正する") {
-                    VStack(alignment: .leading, spacing: 10) {
-                        let diffAbs = abs(bDiff)
+    private var method2Card: some View {
+        MentalCard(title: "方法②　キリのいい数に丸めて補正する") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(isRoundedUp
+                    ? "\(b) を \(bRounded) に切り上げて計算し、余分を引く"
+                    : "\(b) を \(bRounded) に切り捨てて計算し、不足を足す")
+                    .font(.system(size: 13)).foregroundColor(.secondary)
+                MentalRow(circled: "①", formula: "\(a) × \(bRounded)", value: roundedProduct, color: .purple)
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("② 補正").font(.system(size: 15, weight: .semibold))
                         Text(isRoundedUp
-                            ? "\(b) を \(bRounded) に切り上げて計算し、余分を引く"
-                            : "\(b) を \(bRounded) に切り捨てて計算し、不足を足す")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                        MentalRow(circled: "①", formula: "\(a) × \(bRounded)", value: roundedProduct, color: .purple)
-                        HStack(alignment: .top) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("② 補正")
-                                    .font(.system(size: 15, weight: .semibold))
-                                Text(isRoundedUp
-                                    ? "\(bRounded) − \(b) = \(diffAbs)  →  \(a) × \(diffAbs) = \(adjustAmount) を引く"
-                                    : "\(b) − \(bRounded) = \(diffAbs)  →  \(a) × \(diffAbs) = \(adjustAmount) を足す")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Text(isRoundedUp ? "−\(adjustAmount)" : "+\(adjustAmount)")
-                                .font(.system(size: 22, weight: .bold, design: .monospaced))
-                                .foregroundColor(isRoundedUp ? .red : .green)
-                        }
-                        Divider()
-                        HStack {
-                            Text("③ 合計")
-                                .font(.system(size: 15, weight: .semibold))
-                            Spacer()
-                            let op = isRoundedUp ? "−" : "+"
-                            Text("\(roundedProduct) \(op) \(adjustAmount) = \(result)")
-                                .font(.system(size: 18, weight: .bold, design: .monospaced))
-                                .foregroundColor(.blue)
+                            ? "\(bRounded)−\(b)=\(abs(bDiff)) → \(a)×\(abs(bDiff))=\(adjustAmount) を引く"
+                            : "\(b)−\(bRounded)=\(abs(bDiff)) → \(a)×\(abs(bDiff))=\(adjustAmount) を足す")
+                            .font(.system(size: 12)).foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Text(isRoundedUp ? "−\(adjustAmount)" : "+\(adjustAmount)")
+                        .font(.system(size: 22, weight: .bold, design: .monospaced))
+                        .foregroundColor(isRoundedUp ? .red : .green)
+                }
+                Divider()
+                HStack {
+                    Text("③ 合計").font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                    Text("\(roundedProduct) \(isRoundedUp ? "−" : "+") \(adjustAmount) = \(result)")
+                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .foregroundColor(.blue)
+                }
+            }
+        }
+    }
+
+    private var method3Card: some View {
+        MentalCard(title: "方法③　おみやげ算 🎁") {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Text("十の位が同じ（\(omiyageT)）のとき使える方法")
+                        .font(.system(size: 13)).foregroundColor(.secondary)
+                    if isClassicCase {
+                        Text("✨ 一の位の和が10")
+                            .font(.system(size: 11, weight: .bold)).foregroundColor(.orange)
+                            .padding(.horizontal, 7).padding(.vertical, 3)
+                            .background(Color.orange.opacity(0.15)).cornerRadius(6)
+                    }
+                }
+                HStack(spacing: 4) {
+                    Group {
+                        Text("\(omiyageT)").foregroundColor(.blue)
+                        Text("\(omiyageA0)").foregroundColor(.orange)
+                    }
+                    .font(.system(size: 36, weight: .bold, design: .monospaced))
+                    Text(" × ").font(.system(size: 26, weight: .bold)).foregroundColor(.secondary)
+                    Group {
+                        Text("\(omiyageT)").foregroundColor(.blue)
+                        Text("\(omiyageB0)").foregroundColor(.green)
+                    }
+                    .font(.system(size: 36, weight: .bold, design: .monospaced))
+                }
+                .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 4)
+                Text("bの一の位（\(omiyageB0)）を「おみやげ」としてaに渡す")
+                    .font(.system(size: 13)).foregroundColor(.secondary)
+                HStack {
+                    Text("①").font(.system(size: 15, weight: .bold)).frame(width: 24)
+                    Text("\(a) + \(omiyageB0)（おみやげを渡す）")
+                        .font(.system(size: 15, design: .monospaced)).foregroundColor(.secondary)
+                    Spacer()
+                    Text("= \(omiyageStep1)")
+                        .font(.system(size: 20, weight: .bold, design: .monospaced))
+                        .foregroundColor(isClassicCase ? .orange : .primary)
+                }
+                if isClassicCase {
+                    Text("　→ キリのいい数になる！")
+                        .font(.system(size: 12)).foregroundColor(.orange).padding(.leading, 28)
+                }
+                MentalRow(circled: "②",
+                          formula: "\(omiyageT * 10) × \(omiyageStep1)（十の位×受け取った数）",
+                          value: omiyageStep2, color: .blue)
+                MentalRow(circled: "③",
+                          formula: "\(omiyageA0) × \(omiyageB0)（一の位どうし）",
+                          value: omiyageStep3, color: .orange)
+                Divider()
+                HStack {
+                    Text("④ 合計").font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                    Text("\(omiyageStep2) + \(omiyageStep3) = \(result)")
+                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .foregroundColor(.blue)
+                }
+            }
+        }
+    }
+
+    private var method4Card: some View {
+        MentalCard(title: "方法④　インド式・クロス計算 ✕") {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("縦・斜め・縦の3ゾーンに分けて計算する")
+                    .font(.system(size: 13)).foregroundColor(.secondary)
+                CrossDiagramView(a1: a1, a0: a0, b1: b1, b0: b0)
+                VStack(spacing: 8) {
+                    crossRow("①", "一の位：\(a0) × \(b0) = \(crossRight)",
+                             crossRightCarry, crossRightDigit,
+                             "\(crossRightDigit) を書いて \(crossRightCarry) 繰り上げ", .red)
+                    crossRow("②",
+                             "十の位：\(a1)×\(b0) + \(a0)×\(b1)\(crossRightCarry > 0 ? " + \(crossRightCarry)" : "") = \(crossMidTotal)",
+                             crossMidCarry, crossMidDigit,
+                             "\(crossMidDigit) を書いて \(crossMidCarry) 繰り上げ", .orange)
+                    crossRow("③",
+                             "百の位：\(a1) × \(b1)\(crossMidCarry > 0 ? " + \(crossMidCarry)" : "") = \(crossLeftTotal)",
+                             0, crossLeftTotal, "", .purple)
+                }
+                Divider()
+                HStack {
+                    Text("④ 桁を並べる").font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                    (Text("\(crossLeftTotal)").foregroundColor(.purple) +
+                     Text("\(crossMidDigit)").foregroundColor(.orange) +
+                     Text("\(crossRightDigit)").foregroundColor(.red) +
+                     Text("  =  \(result)").foregroundColor(.blue))
+                        .font(.system(size: 22, weight: .bold, design: .monospaced))
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func crossRow(_ label: String, _ desc: String,
+                          _ carry: Int, _ digit: Int,
+                          _ carryText: String, _ color: Color) -> some View {
+        HStack(alignment: .top) {
+            Text(label).font(.system(size: 15, weight: .bold)).frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(desc).font(.system(size: 14, design: .monospaced)).minimumScaleFactor(0.75)
+                if carry > 0 {
+                    Text("　→ \(carryText)").font(.system(size: 12)).foregroundColor(.secondary)
+                }
+            }
+            Spacer()
+            Text("→ \(digit)")
+                .font(.system(size: 20, weight: .bold, design: .monospaced)).foregroundColor(color)
+        }
+    }
+
+    private var method5Card: some View {
+        let steps = factorSteps
+        let circ = ["①","②","③","④","⑤","⑥","⑦","⑧"]
+        return MentalCard(title: "方法⑤　素因数分解で計算する") {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("数を素因数に分解し、小さい数の掛け算を繰り返す")
+                    .font(.system(size: 13)).foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Text("\(a) =").foregroundColor(.secondary)
+                        Text(factorsAStr).foregroundColor(.blue)
+                    }.font(.system(size: 15, design: .monospaced))
+                    HStack(spacing: 4) {
+                        Text("\(b) =").foregroundColor(.secondary)
+                        Text(factorsBStr).foregroundColor(.orange)
+                    }.font(.system(size: 15, design: .monospaced))
+                }
+                .padding(10).background(Color(.secondarySystemBackground)).cornerRadius(8)
+                Text("\(factorTarget) = \(factorTargetStr) なので \(factorBase) から順に掛ける")
+                    .font(.system(size: 13)).foregroundColor(.secondary)
+                VStack(spacing: 6) {
+                    ForEach(0..<steps.count, id: \.self) { idx in
+                        let prev = idx == 0 ? factorBase : steps[idx - 1].result
+                        MentalRow(circled: idx < circ.count ? circ[idx] : "\(idx+1)",
+                                  formula: "\(prev) × \(steps[idx].factor)",
+                                  value: steps[idx].result, color: .teal)
+                    }
+                }
+                Divider()
+                HStack {
+                    Text("答え").font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                    Text("\(factorBase) × \(factorTargetStr) = \(result)")
+                        .font(.system(size: 17, weight: .bold, design: .monospaced))
+                        .foregroundColor(.blue).minimumScaleFactor(0.7)
+                }
+            }
+        }
+    }
+
+    private var method6Card: some View {
+        let steps = regroupSteps
+        let circ = ["①","②","③","④","⑤","⑥","⑦","⑧"]
+        return MentalCard(title: "方法⑥　因数を統合・組み換えて計算する") {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("a と b の素因数をまとめて、2 と 5 を組み合わせて 10 を作る")
+                    .font(.system(size: 13)).foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 4) {
+                        Text("\(a) =").foregroundColor(.secondary)
+                        Text(factorsACompact).foregroundColor(.blue)
+                        Text("  \(b) =").foregroundColor(.secondary)
+                        Text(factorsBCompact).foregroundColor(.orange)
+                    }.font(.system(size: 14, design: .monospaced))
+                    HStack(spacing: 4) {
+                        Text("全素因数:").foregroundColor(.secondary)
+                        Text(allFactorsStr).foregroundColor(.primary)
+                    }.font(.system(size: 13, design: .monospaced))
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.down").foregroundColor(.teal).font(.system(size: 11))
+                        Text("組み換え:").foregroundColor(.teal).font(.system(size: 13, weight: .semibold))
+                        Text(regroupedStr)
+                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                            .foregroundColor(.teal)
+                    }
+                    Text("✓ キリのいい数が \(regroupRoundCount) 個できた！")
+                        .font(.system(size: 12, weight: .bold)).foregroundColor(.teal)
+                }
+                .padding(10).background(Color(.secondarySystemBackground)).cornerRadius(8)
+                if !steps.isEmpty {
+                    Text("〔\(regroupBase)〕から順に掛ける")
+                        .font(.system(size: 13)).foregroundColor(.secondary)
+                    VStack(spacing: 6) {
+                        ForEach(0..<steps.count, id: \.self) { idx in
+                            let prev = idx == 0 ? regroupBase : steps[idx - 1].result
+                            MentalRow(circled: idx < circ.count ? circ[idx] : "\(idx+1)",
+                                      formula: "\(prev) × \(steps[idx].factor)",
+                                      value: steps[idx].result, color: .teal)
                         }
                     }
                 }
-            }
-
-            if isOmiyageApplicable {
-                MentalCard(title: "方法③　おみやげ算 🎁") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack(spacing: 8) {
-                            Text("十の位が同じ（\(omiyageT)）のとき使える方法")
-                                .font(.system(size: 13))
-                                .foregroundColor(.secondary)
-                            if isClassicCase {
-                                Text("✨ 一の位の和が10")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(.orange)
-                                    .padding(.horizontal, 7)
-                                    .padding(.vertical, 3)
-                                    .background(Color.orange.opacity(0.15))
-                                    .cornerRadius(6)
-                            }
-                        }
-                        HStack(spacing: 4) {
-                            Group {
-                                Text("\(omiyageT)").foregroundColor(.blue)
-                                Text("\(omiyageA0)").foregroundColor(.orange)
-                            }
-                            .font(.system(size: 36, weight: .bold, design: .monospaced))
-                            Text(" × ")
-                                .font(.system(size: 26, weight: .bold))
-                                .foregroundColor(.secondary)
-                            Group {
-                                Text("\(omiyageT)").foregroundColor(.blue)
-                                Text("\(omiyageB0)").foregroundColor(.green)
-                            }
-                            .font(.system(size: 36, weight: .bold, design: .monospaced))
-                        }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 4)
-
-                        Text("bの一の位（\(omiyageB0)）を「おみやげ」としてaに渡す")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-
-                        HStack {
-                            Text("①")
-                                .font(.system(size: 15, weight: .bold))
-                                .frame(width: 24)
-                            Text("\(a) + \(omiyageB0)（おみやげを渡す）")
-                                .font(.system(size: 15, design: .monospaced))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Text("= \(omiyageStep1)")
-                                .font(.system(size: 20, weight: .bold, design: .monospaced))
-                                .foregroundColor(isClassicCase ? .orange : .primary)
-                        }
-                        if isClassicCase {
-                            Text("　→ キリのいい数になる！")
-                                .font(.system(size: 12))
-                                .foregroundColor(.orange)
-                                .padding(.leading, 28)
-                        }
-                        MentalRow(circled: "②", formula: "\(omiyageT * 10) × \(omiyageStep1)（十の位×受け取った数）", value: omiyageStep2, color: .blue)
-                        MentalRow(circled: "③", formula: "\(omiyageA0) × \(omiyageB0)（一の位どうし）", value: omiyageStep3, color: .orange)
-                        Divider()
-                        HStack {
-                            Text("④ 合計")
-                                .font(.system(size: 15, weight: .semibold))
-                            Spacer()
-                            Text("\(omiyageStep2) + \(omiyageStep3) = \(result)")
-                                .font(.system(size: 18, weight: .bold, design: .monospaced))
-                                .foregroundColor(.blue)
-                        }
-                    }
-                }
-            }
-
-            MentalCard(title: "方法④　インド式・クロス計算 ✕") {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("縦・斜め・縦の3ゾーンに分けて計算する")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-
-                    CrossDiagramView(a1: a1, a0: a0, b1: b1, b0: b0)
-
-                    VStack(spacing: 8) {
-                        HStack(alignment: .top) {
-                            Text("①")
-                                .font(.system(size: 15, weight: .bold))
-                                .frame(width: 24)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("一の位：\(a0) × \(b0) = \(crossRight)")
-                                    .font(.system(size: 15, design: .monospaced))
-                                if crossRightCarry > 0 {
-                                    Text("　→ \(crossRightDigit) を書いて \(crossRightCarry) 繰り上げ")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            Spacer()
-                            Text("→ \(crossRightDigit)")
-                                .font(.system(size: 20, weight: .bold, design: .monospaced))
-                                .foregroundColor(.red)
-                        }
-
-                        HStack(alignment: .top) {
-                            Text("②")
-                                .font(.system(size: 15, weight: .bold))
-                                .frame(width: 24)
-                            VStack(alignment: .leading, spacing: 2) {
-                                let carryStr = crossRightCarry > 0 ? " + \(crossRightCarry)" : ""
-                                Text("十の位：\(a1)×\(b0) + \(a0)×\(b1)\(carryStr) = \(crossMidTotal)")
-                                    .font(.system(size: 14, design: .monospaced))
-                                    .minimumScaleFactor(0.75)
-                                if crossMidCarry > 0 {
-                                    Text("　→ \(crossMidDigit) を書いて \(crossMidCarry) 繰り上げ")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            Spacer()
-                            Text("→ \(crossMidDigit)")
-                                .font(.system(size: 20, weight: .bold, design: .monospaced))
-                                .foregroundColor(.orange)
-                        }
-
-                        HStack(alignment: .top) {
-                            Text("③")
-                                .font(.system(size: 15, weight: .bold))
-                                .frame(width: 24)
-                            VStack(alignment: .leading, spacing: 2) {
-                                let carryStr2 = crossMidCarry > 0 ? " + \(crossMidCarry)" : ""
-                                Text("百の位：\(a1) × \(b1)\(carryStr2) = \(crossLeftTotal)")
-                                    .font(.system(size: 15, design: .monospaced))
-                            }
-                            Spacer()
-                            Text("→ \(crossLeftTotal)")
-                                .font(.system(size: 20, weight: .bold, design: .monospaced))
-                                .foregroundColor(.purple)
-                        }
-                    }
-
-                    Divider()
-
-                    HStack {
-                        Text("④ 桁を並べる")
-                            .font(.system(size: 15, weight: .semibold))
-                        Spacer()
-                        (Text("\(crossLeftTotal)").foregroundColor(.purple) +
-                         Text("\(crossMidDigit)").foregroundColor(.orange) +
-                         Text("\(crossRightDigit)").foregroundColor(.red) +
-                         Text("  =  \(result)").foregroundColor(.blue))
-                            .font(.system(size: 22, weight: .bold, design: .monospaced))
-                    }
-                }
-            }
-
-            if isFactorMethodApplicable {
-                MentalCard(title: "方法⑤　素因数分解で計算する") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("数を素因数に分解し、小さい数の掛け算を繰り返す")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-
-                        // 素因数分解の表示
-                        HStack(spacing: 16) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack(spacing: 4) {
-                                    Text("\(a) =")
-                                        .foregroundColor(.secondary)
-                                    Text(factorsA.map { "\($0)" }.joined(separator: " × "))
-                                        .foregroundColor(.blue)
-                                }
-                                .font(.system(size: 15, design: .monospaced))
-                                HStack(spacing: 4) {
-                                    Text("\(b) =")
-                                        .foregroundColor(.secondary)
-                                    Text(factorsB.map { "\($0)" }.joined(separator: " × "))
-                                        .foregroundColor(.orange)
-                                }
-                                .font(.system(size: 15, design: .monospaced))
-                            }
-                            Spacer()
-                        }
-                        .padding(10)
-                        .background(Color(.secondarySystemBackground))
-                        .cornerRadius(8)
-
-                        // 計算方針
-                        let factorTargetFactorsStr = factorFactors.map { "\($0)" }.joined(separator: " × ")
-                        Text("\(factorTarget) = \(factorTargetFactorsStr) なので \(factorBase) から順に掛ける")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-
-                        // ステップ
-                        let steps = factorSteps
-                        let circled = ["①","②","③","④","⑤","⑥","⑦","⑧"]
-                        VStack(spacing: 6) {
-                            ForEach(0..<steps.count, id: \.self) { idx in
-                                let prev = idx == 0 ? factorBase : steps[idx - 1].result
-                                MentalRow(
-                                    circled: idx < circled.count ? circled[idx] : "\(idx+1)",
-                                    formula: "\(prev) × \(steps[idx].factor)",
-                                    value: steps[idx].result,
-                                    color: .teal
-                                )
-                            }
-                        }
-
-                        Divider()
-                        HStack {
-                            Text("答え")
-                                .font(.system(size: 15, weight: .semibold))
-                            Spacer()
-                            Text("\(factorBase) × \(factorTargetFactorsStr) = \(result)")
-                                .font(.system(size: 17, weight: .bold, design: .monospaced))
-                                .foregroundColor(.blue)
-                                .minimumScaleFactor(0.7)
-                        }
-                    }
-                }
-            }
-
-            if isRegroupApplicable {
-                MentalCard(title: "方法⑥　因数を統合・組み換えて計算する") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("a と b の素因数をまとめて、2 と 5 を組み合わせて 10 を作る")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-
-                        // 変換の可視化
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(spacing: 4) {
-                                Text("\(a) =")
-                                    .foregroundColor(.secondary)
-                                Text(factorsA.map { "\($0)" }.joined(separator: "×"))
-                                    .foregroundColor(.blue)
-                                Text("  \(b) =")
-                                    .foregroundColor(.secondary)
-                                Text(factorsB.map { "\($0)" }.joined(separator: "×"))
-                                    .foregroundColor(.orange)
-                            }
-                            .font(.system(size: 14, design: .monospaced))
-
-                            HStack(spacing: 4) {
-                                Text("全素因数:")
-                                    .foregroundColor(.secondary)
-                                Text(allPrimeFactors.map { "\($0)" }.joined(separator: " × "))
-                                    .foregroundColor(.primary)
-                            }
-                            .font(.system(size: 13, design: .monospaced))
-
-                            HStack(spacing: 6) {
-                                Image(systemName: "arrow.down")
-                                    .foregroundColor(.teal)
-                                    .font(.system(size: 11))
-                                Text("組み換え:")
-                                    .foregroundColor(.teal)
-                                    .font(.system(size: 13, weight: .semibold))
-                                Text(regrouped.map { "\($0)" }.joined(separator: " × "))
-                                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.teal)
-                            }
-
-                            let roundCount = regrouped.filter { $0 % 10 == 0 }.count
-                            Text("✓ キリのいい数が \(roundCount) 個できた！")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.teal)
-                        }
-                        .padding(10)
-                        .background(Color(.secondarySystemBackground))
-                        .cornerRadius(8)
-
-                        // ステップ計算
-                        let steps = regroupSteps
-                        let base  = regrouped.first ?? result
-                        let circ  = ["①","②","③","④","⑤","⑥","⑦","⑧"]
-                        if !steps.isEmpty {
-                            Text("〔\(base)〕から順に掛ける")
-                                .font(.system(size: 13))
-                                .foregroundColor(.secondary)
-                            VStack(spacing: 6) {
-                                ForEach(0..<steps.count, id: \.self) { idx in
-                                    let prev = idx == 0 ? base : steps[idx - 1].result
-                                    MentalRow(
-                                        circled: idx < circ.count ? circ[idx] : "\(idx+1)",
-                                        formula: "\(prev) × \(steps[idx].factor)",
-                                        value: steps[idx].result,
-                                        color: .teal
-                                    )
-                                }
-                            }
-                        }
-
-                        Divider()
-                        HStack {
-                            Text("答え")
-                                .font(.system(size: 15, weight: .semibold))
-                            Spacer()
-                            Text("\(regrouped.map { "\($0)" }.joined(separator: " × ")) = \(result)")
-                                .font(.system(size: 16, weight: .bold, design: .monospaced))
-                                .foregroundColor(.blue)
-                                .minimumScaleFactor(0.65)
-                        }
-                    }
+                Divider()
+                HStack {
+                    Text("答え").font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                    Text("\(regroupedStr) = \(result)")
+                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                        .foregroundColor(.blue).minimumScaleFactor(0.65)
                 }
             }
         }
