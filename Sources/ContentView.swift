@@ -196,6 +196,46 @@ struct MentalMathView: View {
         return steps
     }
 
+    // 方法⑥: 素因数を統合・組み換えて10を作る
+    var allPrimeFactors: [Int] { (factorsA + factorsB).sorted() }
+
+    func niceGroupings(from factors: [Int]) -> [Int] {
+        var counts = [Int: Int]()
+        for f in factors { counts[f, default: 0] += 1 }
+        var groups = [Int]()
+        // 2 × 5 → 10
+        let numTens = min(counts[2, default: 0], counts[5, default: 0])
+        for _ in 0..<numTens { groups.append(10) }
+        if let c = counts[2] { let r = c - numTens; if r > 0 { counts[2] = r } else { counts.removeValue(forKey: 2) } }
+        if let c = counts[5] { let r = c - numTens; if r > 0 { counts[5] = r } else { counts.removeValue(forKey: 5) } }
+        // 残り: 同じ素因数をまとめる
+        for prime in counts.keys.sorted() {
+            guard let cnt = counts[prime], cnt > 0 else { continue }
+            var val = 1; for _ in 0..<cnt { val *= prime }
+            groups.append(val)
+        }
+        // 10の倍数を先頭に、残りは大きい順
+        return groups.sorted { lhs, rhs in
+            let lRound = lhs % 10 == 0, rRound = rhs % 10 == 0
+            if lRound != rRound { return lRound }
+            return lhs > rhs
+        }
+    }
+    var regrouped: [Int] { niceGroupings(from: allPrimeFactors) }
+    var regroupSteps: [(factor: Int, result: Int)] {
+        guard regrouped.count > 1 else { return [] }
+        var steps = [(Int, Int)]()
+        var current = regrouped[0]
+        for i in 1..<regrouped.count { current *= regrouped[i]; steps.append((regrouped[i], current)) }
+        return steps
+    }
+    // a と b の「異なる数」由来の 2 と 5 を組み合わせて初めて 10 ができるときに表示
+    var isRegroupApplicable: Bool {
+        let a2 = factorsA.filter { $0 == 2 }.count, a5 = factorsA.filter { $0 == 5 }.count
+        let b2 = factorsB.filter { $0 == 2 }.count, b5 = factorsB.filter { $0 == 5 }.count
+        return min(a2 + b2, a5 + b5) > min(a2, a5) + min(b2, b5)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
@@ -479,6 +519,91 @@ struct MentalMathView: View {
                                 .font(.system(size: 17, weight: .bold, design: .monospaced))
                                 .foregroundColor(.blue)
                                 .minimumScaleFactor(0.7)
+                        }
+                    }
+                }
+            }
+
+            if isRegroupApplicable {
+                MentalCard(title: "方法⑥　因数を統合・組み換えて計算する") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("a と b の素因数をまとめて、2 と 5 を組み合わせて 10 を作る")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+
+                        // 変換の可視化
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 4) {
+                                Text("\(a) =")
+                                    .foregroundColor(.secondary)
+                                Text(factorsA.map { "\($0)" }.joined(separator: "×"))
+                                    .foregroundColor(.blue)
+                                Text("  \(b) =")
+                                    .foregroundColor(.secondary)
+                                Text(factorsB.map { "\($0)" }.joined(separator: "×"))
+                                    .foregroundColor(.orange)
+                            }
+                            .font(.system(size: 14, design: .monospaced))
+
+                            HStack(spacing: 4) {
+                                Text("全素因数:")
+                                    .foregroundColor(.secondary)
+                                Text(allPrimeFactors.map { "\($0)" }.joined(separator: " × "))
+                                    .foregroundColor(.primary)
+                            }
+                            .font(.system(size: 13, design: .monospaced))
+
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.down")
+                                    .foregroundColor(.teal)
+                                    .font(.system(size: 11))
+                                Text("組み換え:")
+                                    .foregroundColor(.teal)
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text(regrouped.map { "\($0)" }.joined(separator: " × "))
+                                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.teal)
+                            }
+
+                            let roundCount = regrouped.filter { $0 % 10 == 0 }.count
+                            Text("✓ キリのいい数が \(roundCount) 個できた！")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.teal)
+                        }
+                        .padding(10)
+                        .background(Color(.secondarySystemBackground))
+                        .cornerRadius(8)
+
+                        // ステップ計算
+                        let steps = regroupSteps
+                        let base  = regrouped.first ?? result
+                        let circ  = ["①","②","③","④","⑤","⑥","⑦","⑧"]
+                        if !steps.isEmpty {
+                            Text("〔\(base)〕から順に掛ける")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                            VStack(spacing: 6) {
+                                ForEach(0..<steps.count, id: \.self) { idx in
+                                    let prev = idx == 0 ? base : steps[idx - 1].result
+                                    MentalRow(
+                                        circled: idx < circ.count ? circ[idx] : "\(idx+1)",
+                                        formula: "\(prev) × \(steps[idx].factor)",
+                                        value: steps[idx].result,
+                                        color: .teal
+                                    )
+                                }
+                            }
+                        }
+
+                        Divider()
+                        HStack {
+                            Text("答え")
+                                .font(.system(size: 15, weight: .semibold))
+                            Spacer()
+                            Text("\(regrouped.map { "\($0)" }.joined(separator: " × ")) = \(result)")
+                                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                .foregroundColor(.blue)
+                                .minimumScaleFactor(0.65)
                         }
                     }
                 }
