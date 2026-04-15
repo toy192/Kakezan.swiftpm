@@ -5,6 +5,7 @@ struct ContentView: View {
     @State private var secondNumber = 34
     @State private var result: Int? = nil
     @State private var showDetail = false
+    @State private var showFactorTable = false
 
     var body: some View {
         ZStack {
@@ -42,6 +43,18 @@ struct ContentView: View {
                     }
                     .buttonStyle(.plain)
 
+                    Button {
+                        showFactorTable = true
+                    } label: {
+                        Label("素因数表 1〜99", systemImage: "tablecells")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white)
+                            .frame(width: 220, height: 48)
+                            .background(Color.purple)
+                            .cornerRadius(16)
+                    }
+                    .buttonStyle(.plain)
+
                     if showDetail, let r = result {
                         StepByStepView(a: firstNumber, b: secondNumber, result: r)
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
@@ -54,6 +67,9 @@ struct ContentView: View {
                 }
                 .padding(.horizontal, 24)
             }
+        }
+        .sheet(isPresented: $showFactorTable) {
+            FactorTableView()
         }
     }
 }
@@ -791,6 +807,109 @@ struct CrossDiagramView: View {
             .frame(width: 42, height: 42)
             .background(color.opacity(0.12))
             .cornerRadius(8)
+    }
+}
+
+// MARK: - 素因数表ヘルパー
+
+private func isPrimeNumber(_ n: Int) -> Bool {
+    guard n >= 2 else { return false }
+    if n == 2 { return true }
+    if n % 2 == 0 { return false }
+    var i = 3
+    while i * i <= n {
+        if n % i == 0 { return false }
+        i += 2
+    }
+    return true
+}
+
+private func primeFactorsOf(_ n: Int) -> [Int] {
+    var result = [Int]()
+    var num = n
+    var d = 2
+    while d * d <= num {
+        while num % d == 0 {
+            result.append(d)
+            num /= d
+        }
+        d += 1
+    }
+    if num > 1 { result.append(num) }
+    return result
+}
+
+private func factorLabel(_ n: Int) -> String {
+    if n == 1 { return "1" }
+    if isPrimeNumber(n) { return "素数" }
+    let factors = primeFactorsOf(n)
+    var counts = [Int: Int]()
+    for f in factors { counts[f, default: 0] += 1 }
+    let superscripts = ["2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶"]
+    let parts = counts.keys.sorted().map { p -> String in
+        let c = counts[p]!
+        let exp = c > 1 ? (superscripts["\(c)"] ?? "^\(c)") : ""
+        return "\(p)\(exp)"
+    }
+    return parts.joined(separator: "×")
+}
+
+// MARK: - 素因数表ビュー
+
+struct FactorTableView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    private let columns = [
+        GridItem(.flexible()),
+        GridItem(.flexible()),
+        GridItem(.flexible()),
+        GridItem(.flexible())
+    ]
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(1..<100) { n in
+                        FactorCell(n: n)
+                    }
+                }
+                .padding(16)
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("素因数表 1〜99")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("閉じる") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+struct FactorCell: View {
+    let n: Int
+
+    private var cellColor: Color {
+        if n == 1 { return .gray }
+        return isPrimeNumber(n) ? .orange : .blue
+    }
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("\(n)")
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundColor(cellColor)
+            Text(factorLabel(n))
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundColor(cellColor.opacity(0.85))
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, minHeight: 60)
+        .background(cellColor.opacity(0.1))
+        .cornerRadius(10)
     }
 }
 
