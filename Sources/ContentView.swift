@@ -17,7 +17,7 @@ struct ContentView: View {
                         .font(.system(size: 52, weight: .bold, design: .rounded))
                         .padding(.top, 40)
 
-                    HStack(alignment: .center, spacing: 30) {
+                    HStack(alignment: .center, spacing: 20) {
                         NumberInputView(value: $firstNumber)
                         Text("×")
                             .font(.system(size: 60, weight: .bold))
@@ -149,13 +149,9 @@ struct MentalMathView: View {
     var omiyageT: Int    { a / 10 }
     var omiyageA0: Int   { a % 10 }
     var omiyageB0: Int   { b % 10 }
-    // bの一の位をaに「おみやげ」として渡した後の値
     var omiyageStep1: Int { a + omiyageB0 }
-    // 十の位×10 × step1
     var omiyageStep2: Int { omiyageT * 10 * omiyageStep1 }
-    // 一の位どうしの積
     var omiyageStep3: Int { omiyageA0 * omiyageB0 }
-    // 一の位の和が10のとき step1 がキリのいい数になる特別ケース
     var isClassicCase: Bool { omiyageA0 + omiyageB0 == 10 }
 
     var body: some View {
@@ -170,16 +166,13 @@ struct MentalMathView: View {
             }
             .padding(.top, 4)
 
-            // 方法①: 2段階計算
             MentalCard(title: "方法①　2段階で計算する") {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("一の位 → 十の位 の順に掛けて、最後に足す")
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
-
                     MentalRow(circled: "①", formula: "\(a) × \(bOnes)（一の位）", value: partOnes, color: .orange)
                     MentalRow(circled: "②", formula: "\(a) × \(bTens)（十の位）", value: partTens, color: .green)
-
                     Divider()
                     HStack {
                         Text("③ 合計")
@@ -192,7 +185,6 @@ struct MentalMathView: View {
                 }
             }
 
-            // 方法②: 丸め法
             if bDiff != 0 {
                 MentalCard(title: "方法②　キリのいい数に丸めて補正する") {
                     VStack(alignment: .leading, spacing: 10) {
@@ -202,9 +194,7 @@ struct MentalMathView: View {
                             : "\(b) を \(bRounded) に切り捨てて計算し、不足を足す")
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
-
                         MentalRow(circled: "①", formula: "\(a) × \(bRounded)", value: roundedProduct, color: .purple)
-
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("② 補正")
@@ -220,7 +210,6 @@ struct MentalMathView: View {
                                 .font(.system(size: 22, weight: .bold, design: .monospaced))
                                 .foregroundColor(isRoundedUp ? .red : .green)
                         }
-
                         Divider()
                         HStack {
                             Text("③ 合計")
@@ -235,7 +224,6 @@ struct MentalMathView: View {
                 }
             }
 
-            // 方法③: おみやげ算（十の位が同じとき常に表示）
             if isOmiyageApplicable {
                 MentalCard(title: "方法③　おみやげ算 🎁") {
                     VStack(alignment: .leading, spacing: 12) {
@@ -253,24 +241,18 @@ struct MentalMathView: View {
                                     .cornerRadius(6)
                             }
                         }
-
-                        // 数字の視覚化
                         HStack(spacing: 4) {
                             Group {
-                                Text("\(omiyageT)")
-                                    .foregroundColor(.blue)
-                                Text("\(omiyageA0)")
-                                    .foregroundColor(.orange)
+                                Text("\(omiyageT)").foregroundColor(.blue)
+                                Text("\(omiyageA0)").foregroundColor(.orange)
                             }
                             .font(.system(size: 36, weight: .bold, design: .monospaced))
                             Text(" × ")
                                 .font(.system(size: 26, weight: .bold))
                                 .foregroundColor(.secondary)
                             Group {
-                                Text("\(omiyageT)")
-                                    .foregroundColor(.blue)
-                                Text("\(omiyageB0)")
-                                    .foregroundColor(.green)
+                                Text("\(omiyageT)").foregroundColor(.blue)
+                                Text("\(omiyageB0)").foregroundColor(.green)
                             }
                             .font(.system(size: 36, weight: .bold, design: .monospaced))
                         }
@@ -281,7 +263,6 @@ struct MentalMathView: View {
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
 
-                        // ① おみやげを渡す
                         HStack {
                             Text("①")
                                 .font(.system(size: 15, weight: .bold))
@@ -300,20 +281,8 @@ struct MentalMathView: View {
                                 .foregroundColor(.orange)
                                 .padding(.leading, 28)
                         }
-
-                        MentalRow(
-                            circled: "②",
-                            formula: "\(omiyageT * 10) × \(omiyageStep1)（十の位×受け取った数）",
-                            value: omiyageStep2,
-                            color: .blue
-                        )
-                        MentalRow(
-                            circled: "③",
-                            formula: "\(omiyageA0) × \(omiyageB0)（一の位どうし）",
-                            value: omiyageStep3,
-                            color: .orange
-                        )
-
+                        MentalRow(circled: "②", formula: "\(omiyageT * 10) × \(omiyageStep1)（十の位×受け取った数）", value: omiyageStep2, color: .blue)
+                        MentalRow(circled: "③", formula: "\(omiyageA0) × \(omiyageB0)（一の位どうし）", value: omiyageStep3, color: .orange)
                         Divider()
                         HStack {
                             Text("④ 合計")
@@ -462,33 +431,59 @@ struct SumChip: View {
     }
 }
 
+// MARK: - 桁ごとの数字入力
+
 struct NumberInputView: View {
     @Binding var value: Int
 
+    var tens: Int { value / 10 }
+    var ones: Int { value % 10 }
+
     var body: some View {
-        VStack(spacing: 14) {
+        HStack(spacing: 8) {
+            DigitSelector(label: "十", digit: tens, range: 1...9) { value = $0 * 10 + ones }
+            DigitSelector(label: "一", digit: ones, range: 0...9) { value = tens * 10 + $0 }
+        }
+    }
+}
+
+struct DigitSelector: View {
+    let label: String
+    let digit: Int
+    let range: ClosedRange<Int>
+    let onChange: (Int) -> Void
+
+    var canIncrement: Bool { digit < range.upperBound }
+    var canDecrement: Bool { digit > range.lowerBound }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(label)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.secondary)
+
             Button {
-                if value < 99 { value += 1 }
+                if canIncrement { onChange(digit + 1) }
             } label: {
                 Image(systemName: "chevron.up.circle.fill")
-                    .font(.system(size: 48))
-                    .foregroundColor(.blue)
+                    .font(.system(size: 40))
+                    .foregroundColor(canIncrement ? .blue : Color(.systemGray4))
             }
             .buttonStyle(.plain)
 
-            Text("\(value)")
-                .font(.system(size: 80, weight: .bold, design: .monospaced))
-                .frame(width: 160, height: 100)
+            Text("\(digit)")
+                .font(.system(size: 68, weight: .bold, design: .monospaced))
+                .frame(width: 80, height: 86)
                 .background(Color(.systemBackground))
-                .cornerRadius(16)
-                .shadow(radius: 4)
+                .cornerRadius(14)
+                .shadow(radius: 3)
 
             Button {
-                if value > 10 { value -= 1 }
+                if canDecrement { onChange(digit - 1) }
             } label: {
                 Image(systemName: "chevron.down.circle.fill")
-                    .font(.system(size: 48))
-                    .foregroundColor(.blue)
+                    .font(.system(size: 40))
+                    .foregroundColor(canDecrement ? .blue : Color(.systemGray4))
             }
             .buttonStyle(.plain)
         }
