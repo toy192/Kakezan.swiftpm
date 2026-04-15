@@ -144,16 +144,19 @@ struct MentalMathView: View {
     var adjustAmount: Int { abs(a * bDiff) }
     var isRoundedUp: Bool { bRounded > b }
 
-    // 方法③: おみやげ算
-    // 条件: 十の位が同じ、かつ一の位の和 = 10
-    var isOmiyageApplicable: Bool {
-        a / 10 == b / 10 && (a % 10) + (b % 10) == 10
-    }
-    var omiyageT: Int  { a / 10 }
-    var omiyageA0: Int { a % 10 }
-    var omiyageB0: Int { b % 10 }
-    var omiyageHi: Int { omiyageT * (omiyageT + 1) }   // 上の部分
-    var omiyageLo: Int { omiyageA0 * omiyageB0 }         // 下の部分（2桁で表示）
+    // 方法③: おみやげ算（条件: 十の位が同じ）
+    var isOmiyageApplicable: Bool { a / 10 == b / 10 }
+    var omiyageT: Int    { a / 10 }
+    var omiyageA0: Int   { a % 10 }
+    var omiyageB0: Int   { b % 10 }
+    // bの一の位をaに「おみやげ」として渡した後の値
+    var omiyageStep1: Int { a + omiyageB0 }
+    // 十の位×10 × step1
+    var omiyageStep2: Int { omiyageT * 10 * omiyageStep1 }
+    // 一の位どうしの積
+    var omiyageStep3: Int { omiyageA0 * omiyageB0 }
+    // 一の位の和が10のとき step1 がキリのいい数になる特別ケース
+    var isClassicCase: Bool { omiyageA0 + omiyageB0 == 10 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -232,13 +235,24 @@ struct MentalMathView: View {
                 }
             }
 
-            // 方法③: おみやげ算（条件が揃った場合のみ表示）
+            // 方法③: おみやげ算（十の位が同じとき常に表示）
             if isOmiyageApplicable {
                 MentalCard(title: "方法③　おみやげ算 🎁") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("十の位が同じ（\(omiyageT)）で一の位の和が10（\(omiyageA0)+\(omiyageB0)=10）のとき使える特別な方法")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
+                        HStack(spacing: 8) {
+                            Text("十の位が同じ（\(omiyageT)）のとき使える方法")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                            if isClassicCase {
+                                Text("✨ 一の位の和が10")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.orange)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(Color.orange.opacity(0.15))
+                                    .cornerRadius(6)
+                            }
+                        }
 
                         // 数字の視覚化
                         HStack(spacing: 4) {
@@ -249,11 +263,9 @@ struct MentalMathView: View {
                                     .foregroundColor(.orange)
                             }
                             .font(.system(size: 36, weight: .bold, design: .monospaced))
-
                             Text(" × ")
                                 .font(.system(size: 26, weight: .bold))
                                 .foregroundColor(.secondary)
-
                             Group {
                                 Text("\(omiyageT)")
                                     .foregroundColor(.blue)
@@ -265,46 +277,51 @@ struct MentalMathView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 4)
 
-                        Text("一の位（\(omiyageA0)）を「おみやげ」として十の位（\(omiyageT)）に渡す → \(omiyageT) が \(omiyageT + 1) になる")
+                        Text("bの一の位（\(omiyageB0)）を「おみやげ」としてaに渡す")
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
 
+                        // ① おみやげを渡す
+                        HStack {
+                            Text("①")
+                                .font(.system(size: 15, weight: .bold))
+                                .frame(width: 24)
+                            Text("\(a) + \(omiyageB0)（おみやげを渡す）")
+                                .font(.system(size: 15, design: .monospaced))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("= \(omiyageStep1)")
+                                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                                .foregroundColor(isClassicCase ? .orange : .primary)
+                        }
+                        if isClassicCase {
+                            Text("　→ キリのいい数になる！")
+                                .font(.system(size: 12))
+                                .foregroundColor(.orange)
+                                .padding(.leading, 28)
+                        }
+
                         MentalRow(
-                            circled: "①",
-                            formula: "\(omiyageT) × \(omiyageT + 1)（十の位 × 受け取った後の十の位）",
-                            value: omiyageHi,
+                            circled: "②",
+                            formula: "\(omiyageT * 10) × \(omiyageStep1)（十の位×受け取った数）",
+                            value: omiyageStep2,
                             color: .blue
                         )
                         MentalRow(
-                            circled: "②",
+                            circled: "③",
                             formula: "\(omiyageA0) × \(omiyageB0)（一の位どうし）",
-                            value: omiyageLo,
+                            value: omiyageStep3,
                             color: .orange
                         )
 
-                        if omiyageLo < 10 {
-                            Text("※ 一の位の積が1桁のため、先頭に0を補って2桁にする")
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-                        }
-
                         Divider()
-
-                        HStack(alignment: .center) {
-                            Text("③ つなげる")
+                        HStack {
+                            Text("④ 合計")
                                 .font(.system(size: 15, weight: .semibold))
                             Spacer()
-                            HStack(spacing: 1) {
-                                Text("\(omiyageHi)")
-                                    .foregroundColor(.blue)
-                                Text(String(format: "%02d", omiyageLo))
-                                    .foregroundColor(.orange)
-                            }
-                            .font(.system(size: 32, weight: .bold, design: .monospaced))
-                            Text("= \(result)")
-                                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                            Text("\(omiyageStep2) + \(omiyageStep3) = \(result)")
+                                .font(.system(size: 18, weight: .bold, design: .monospaced))
                                 .foregroundColor(.blue)
-                                .padding(.leading, 4)
                         }
                     }
                 }
