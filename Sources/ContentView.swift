@@ -154,6 +154,21 @@ struct MentalMathView: View {
     var omiyageStep3: Int { omiyageA0 * omiyageB0 }
     var isClassicCase: Bool { omiyageA0 + omiyageB0 == 10 }
 
+    // 方法④: インド式・クロス計算（縦・斜め・縦）
+    var a1: Int { a / 10 }
+    var a0: Int { a % 10 }
+    var b1: Int { b / 10 }
+    var b0: Int { b % 10 }
+    var crossRight: Int { a0 * b0 }
+    var crossMid:   Int { a1 * b0 + a0 * b1 }
+    var crossLeft:  Int { a1 * b1 }
+    var crossRightDigit: Int { crossRight % 10 }
+    var crossRightCarry: Int { crossRight / 10 }
+    var crossMidTotal:   Int { crossMid + crossRightCarry }
+    var crossMidDigit:   Int { crossMidTotal % 10 }
+    var crossMidCarry:   Int { crossMidTotal / 10 }
+    var crossLeftTotal:  Int { crossLeft + crossMidCarry }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
@@ -292,6 +307,86 @@ struct MentalMathView: View {
                                 .font(.system(size: 18, weight: .bold, design: .monospaced))
                                 .foregroundColor(.blue)
                         }
+                    }
+                }
+            }
+
+            MentalCard(title: "方法④　インド式・クロス計算 ✕") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("縦・斜め・縦の3ゾーンに分けて計算する")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+
+                    CrossDiagramView(a1: a1, a0: a0, b1: b1, b0: b0)
+
+                    VStack(spacing: 8) {
+                        HStack(alignment: .top) {
+                            Text("①")
+                                .font(.system(size: 15, weight: .bold))
+                                .frame(width: 24)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("一の位：\(a0) × \(b0) = \(crossRight)")
+                                    .font(.system(size: 15, design: .monospaced))
+                                if crossRightCarry > 0 {
+                                    Text("　→ \(crossRightDigit) を書いて \(crossRightCarry) 繰り上げ")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            Spacer()
+                            Text("→ \(crossRightDigit)")
+                                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                                .foregroundColor(.red)
+                        }
+
+                        HStack(alignment: .top) {
+                            Text("②")
+                                .font(.system(size: 15, weight: .bold))
+                                .frame(width: 24)
+                            VStack(alignment: .leading, spacing: 2) {
+                                let carryStr = crossRightCarry > 0 ? " + \(crossRightCarry)" : ""
+                                Text("十の位：\(a1)×\(b0) + \(a0)×\(b1)\(carryStr) = \(crossMidTotal)")
+                                    .font(.system(size: 14, design: .monospaced))
+                                    .minimumScaleFactor(0.75)
+                                if crossMidCarry > 0 {
+                                    Text("　→ \(crossMidDigit) を書いて \(crossMidCarry) 繰り上げ")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            Spacer()
+                            Text("→ \(crossMidDigit)")
+                                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                                .foregroundColor(.orange)
+                        }
+
+                        HStack(alignment: .top) {
+                            Text("③")
+                                .font(.system(size: 15, weight: .bold))
+                                .frame(width: 24)
+                            VStack(alignment: .leading, spacing: 2) {
+                                let carryStr2 = crossMidCarry > 0 ? " + \(crossMidCarry)" : ""
+                                Text("百の位：\(a1) × \(b1)\(carryStr2) = \(crossLeftTotal)")
+                                    .font(.system(size: 15, design: .monospaced))
+                            }
+                            Spacer()
+                            Text("→ \(crossLeftTotal)")
+                                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                                .foregroundColor(.purple)
+                        }
+                    }
+
+                    Divider()
+
+                    HStack {
+                        Text("④ 桁を並べる")
+                            .font(.system(size: 15, weight: .semibold))
+                        Spacer()
+                        (Text("\(crossLeftTotal)").foregroundColor(.purple) +
+                         Text("\(crossMidDigit)").foregroundColor(.orange) +
+                         Text("\(crossRightDigit)").foregroundColor(.red) +
+                         Text("  =  \(result)").foregroundColor(.blue))
+                            .font(.system(size: 22, weight: .bold, design: .monospaced))
                     }
                 }
             }
@@ -487,6 +582,84 @@ struct DigitSelector: View {
             }
             .buttonStyle(.plain)
         }
+    }
+}
+
+// MARK: - クロス計算図
+
+struct CrossDiagramView: View {
+    let a1: Int, a0: Int, b1: Int, b0: Int
+
+    var body: some View {
+        HStack(spacing: 20) {
+            Spacer()
+            // 数字の表示（色分け）
+            VStack(spacing: 6) {
+                HStack(spacing: 4) {
+                    digitBox("\(a1)", .purple)
+                    digitBox("\(a0)", .red)
+                }
+                HStack(spacing: 4) {
+                    Text("×")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.secondary)
+                        .frame(width: 20)
+                    digitBox("\(b1)", .purple)
+                    digitBox("\(b0)", .red)
+                }
+            }
+
+            // ゾーン説明
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.down")
+                        .font(.system(size: 11))
+                        .foregroundColor(.purple)
+                    Text("百の位：")
+                        .font(.system(size: 12))
+                        .foregroundColor(.purple)
+                    Text("\(a1) × \(b1)")
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(.purple)
+                }
+                HStack(spacing: 6) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11))
+                        .foregroundColor(.orange)
+                    Text("十の位：")
+                        .font(.system(size: 12))
+                        .foregroundColor(.orange)
+                    Text("\(a1)×\(b0) + \(a0)×\(b1)")
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(.orange)
+                }
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.down")
+                        .font(.system(size: 11))
+                        .foregroundColor(.red)
+                    Text("一の位：")
+                        .font(.system(size: 12))
+                        .foregroundColor(.red)
+                    Text("\(a0) × \(b0)")
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(.red)
+                }
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(12)
+    }
+
+    @ViewBuilder
+    func digitBox(_ text: String, _ color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 30, weight: .bold, design: .monospaced))
+            .foregroundColor(color)
+            .frame(width: 42, height: 42)
+            .background(color.opacity(0.12))
+            .cornerRadius(8)
     }
 }
 
