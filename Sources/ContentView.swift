@@ -60,6 +60,18 @@ struct ContentView: View {
                         .buttonStyle(.plain)
                     }
 
+                    Button {
+                        showFactorTable = true
+                    } label: {
+                        Label("素因数表 1〜99", systemImage: "tablecells")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white)
+                            .frame(width: 220, height: 48)
+                            .background(Color.purple)
+                            .cornerRadius(16)
+                    }
+                    .buttonStyle(.plain)
+
                     if showDetail, let r = result {
                         StepByStepView(a: firstNumber, b: secondNumber, result: r)
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
