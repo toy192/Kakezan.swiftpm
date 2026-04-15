@@ -169,6 +169,33 @@ struct MentalMathView: View {
     var crossMidCarry:   Int { crossMidTotal / 10 }
     var crossLeftTotal:  Int { crossLeft + crossMidCarry }
 
+    // 方法⑤: 素因数分解
+    func primeFactors(of n: Int) -> [Int] {
+        var factors: [Int] = []
+        var m = n
+        var d = 2
+        while d * d <= m {
+            while m % d == 0 { factors.append(d); m /= d }
+            d += 1
+        }
+        if m > 1 { factors.append(m) }
+        return factors
+    }
+    var factorsA: [Int] { primeFactors(of: a) }
+    var factorsB: [Int] { primeFactors(of: b) }
+    var isFactorMethodApplicable: Bool { factorsA.count > 1 || factorsB.count > 1 }
+    // 因数の多い方を分解し、もう一方から順番に掛ける
+    var useFactorsOfB: Bool { factorsB.count >= factorsA.count }
+    var factorBase:    Int  { useFactorsOfB ? a : b }
+    var factorFactors: [Int] { useFactorsOfB ? factorsB : factorsA }
+    var factorTarget:  Int  { useFactorsOfB ? b : a }
+    var factorSteps: [(factor: Int, result: Int)] {
+        var steps: [(factor: Int, result: Int)] = []
+        var current = factorBase
+        for f in factorFactors { current *= f; steps.append((f, current)) }
+        return steps
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
@@ -387,6 +414,72 @@ struct MentalMathView: View {
                          Text("\(crossRightDigit)").foregroundColor(.red) +
                          Text("  =  \(result)").foregroundColor(.blue))
                             .font(.system(size: 22, weight: .bold, design: .monospaced))
+                    }
+                }
+            }
+
+            if isFactorMethodApplicable {
+                MentalCard(title: "方法⑤　素因数分解で計算する") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("数を素因数に分解し、小さい数の掛け算を繰り返す")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+
+                        // 素因数分解の表示
+                        HStack(spacing: 16) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(spacing: 4) {
+                                    Text("\(a) =")
+                                        .foregroundColor(.secondary)
+                                    Text(factorsA.map { "\($0)" }.joined(separator: " × "))
+                                        .foregroundColor(.blue)
+                                }
+                                .font(.system(size: 15, design: .monospaced))
+                                HStack(spacing: 4) {
+                                    Text("\(b) =")
+                                        .foregroundColor(.secondary)
+                                    Text(factorsB.map { "\($0)" }.joined(separator: " × "))
+                                        .foregroundColor(.orange)
+                                }
+                                .font(.system(size: 15, design: .monospaced))
+                            }
+                            Spacer()
+                        }
+                        .padding(10)
+                        .background(Color(.secondarySystemBackground))
+                        .cornerRadius(8)
+
+                        // 計算方針
+                        let factorTargetFactorsStr = factorFactors.map { "\($0)" }.joined(separator: " × ")
+                        Text("\(factorTarget) = \(factorTargetFactorsStr) なので \(factorBase) から順に掛ける")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+
+                        // ステップ
+                        let steps = factorSteps
+                        let circled = ["①","②","③","④","⑤","⑥","⑦","⑧"]
+                        VStack(spacing: 6) {
+                            ForEach(0..<steps.count, id: \.self) { idx in
+                                let prev = idx == 0 ? factorBase : steps[idx - 1].result
+                                MentalRow(
+                                    circled: idx < circled.count ? circled[idx] : "\(idx+1)",
+                                    formula: "\(prev) × \(steps[idx].factor)",
+                                    value: steps[idx].result,
+                                    color: .teal
+                                )
+                            }
+                        }
+
+                        Divider()
+                        HStack {
+                            Text("答え")
+                                .font(.system(size: 15, weight: .semibold))
+                            Spacer()
+                            Text("\(factorBase) × \(factorTargetFactorsStr) = \(result)")
+                                .font(.system(size: 17, weight: .bold, design: .monospaced))
+                                .foregroundColor(.blue)
+                                .minimumScaleFactor(0.7)
+                        }
                     }
                 }
             }
