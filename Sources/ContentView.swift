@@ -133,16 +133,27 @@ struct MentalMathView: View {
     var partOnes: Int { a * bOnes }
     var partTens: Int { a * bTens }
 
-    // 方法②: 丸め法（b % 10 >= 5 なら切り上げ、そうでなければ切り捨て）
+    // 方法②: 丸め法
     var bRounded: Int {
         let lower = (b / 10) * 10
         let upper = lower + 10
         return (b % 10 >= 5) ? upper : lower
     }
-    var bDiff: Int { b - bRounded }          // 負 = 切り上げ済み、正 = 切り捨て済み
+    var bDiff: Int { b - bRounded }
     var roundedProduct: Int { a * bRounded }
     var adjustAmount: Int { abs(a * bDiff) }
-    var isRoundedUp: Bool { bRounded > b }   // 切り上げなら結果から引く
+    var isRoundedUp: Bool { bRounded > b }
+
+    // 方法③: おみやげ算
+    // 条件: 十の位が同じ、かつ一の位の和 = 10
+    var isOmiyageApplicable: Bool {
+        a / 10 == b / 10 && (a % 10) + (b % 10) == 10
+    }
+    var omiyageT: Int  { a / 10 }
+    var omiyageA0: Int { a % 10 }
+    var omiyageB0: Int { b % 10 }
+    var omiyageHi: Int { omiyageT * (omiyageT + 1) }   // 上の部分
+    var omiyageLo: Int { omiyageA0 * omiyageB0 }         // 下の部分（2桁で表示）
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -178,7 +189,7 @@ struct MentalMathView: View {
                 }
             }
 
-            // 方法②: 丸め法（b が 10 の倍数の場合は不要）
+            // 方法②: 丸め法
             if bDiff != 0 {
                 MentalCard(title: "方法②　キリのいい数に丸めて補正する") {
                     VStack(alignment: .leading, spacing: 10) {
@@ -216,6 +227,84 @@ struct MentalMathView: View {
                             Text("\(roundedProduct) \(op) \(adjustAmount) = \(result)")
                                 .font(.system(size: 18, weight: .bold, design: .monospaced))
                                 .foregroundColor(.blue)
+                        }
+                    }
+                }
+            }
+
+            // 方法③: おみやげ算（条件が揃った場合のみ表示）
+            if isOmiyageApplicable {
+                MentalCard(title: "方法③　おみやげ算 🎁") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("十の位が同じ（\(omiyageT)）で一の位の和が10（\(omiyageA0)+\(omiyageB0)=10）のとき使える特別な方法")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+
+                        // 数字の視覚化
+                        HStack(spacing: 4) {
+                            Group {
+                                Text("\(omiyageT)")
+                                    .foregroundColor(.blue)
+                                Text("\(omiyageA0)")
+                                    .foregroundColor(.orange)
+                            }
+                            .font(.system(size: 36, weight: .bold, design: .monospaced))
+
+                            Text(" × ")
+                                .font(.system(size: 26, weight: .bold))
+                                .foregroundColor(.secondary)
+
+                            Group {
+                                Text("\(omiyageT)")
+                                    .foregroundColor(.blue)
+                                Text("\(omiyageB0)")
+                                    .foregroundColor(.green)
+                            }
+                            .font(.system(size: 36, weight: .bold, design: .monospaced))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 4)
+
+                        Text("一の位（\(omiyageA0)）を「おみやげ」として十の位（\(omiyageT)）に渡す → \(omiyageT) が \(omiyageT + 1) になる")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+
+                        MentalRow(
+                            circled: "①",
+                            formula: "\(omiyageT) × \(omiyageT + 1)（十の位 × 受け取った後の十の位）",
+                            value: omiyageHi,
+                            color: .blue
+                        )
+                        MentalRow(
+                            circled: "②",
+                            formula: "\(omiyageA0) × \(omiyageB0)（一の位どうし）",
+                            value: omiyageLo,
+                            color: .orange
+                        )
+
+                        if omiyageLo < 10 {
+                            Text("※ 一の位の積が1桁のため、先頭に0を補って2桁にする")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+
+                        Divider()
+
+                        HStack(alignment: .center) {
+                            Text("③ つなげる")
+                                .font(.system(size: 15, weight: .semibold))
+                            Spacer()
+                            HStack(spacing: 1) {
+                                Text("\(omiyageHi)")
+                                    .foregroundColor(.blue)
+                                Text(String(format: "%02d", omiyageLo))
+                                    .foregroundColor(.orange)
+                            }
+                            .font(.system(size: 32, weight: .bold, design: .monospaced))
+                            Text("= \(result)")
+                                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                .foregroundColor(.blue)
+                                .padding(.leading, 4)
                         }
                     }
                 }
