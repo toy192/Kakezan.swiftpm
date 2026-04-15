@@ -28,35 +28,37 @@ struct ContentView: View {
                     .onChange(of: firstNumber) { _, _ in result = nil; showDetail = false }
                     .onChange(of: secondNumber) { _, _ in result = nil; showDetail = false }
 
-                    Button {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                            result = firstNumber * secondNumber
-                            showDetail = true
+                    HStack(spacing: 16) {
+                        Button {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                                result = firstNumber * secondNumber
+                                showDetail = true
+                            }
+                        } label: {
+                            Text("計算する")
+                                .font(.system(size: 28, weight: .semibold, design: .rounded))
+                                .foregroundColor(.white)
+                                .frame(width: 220, height: 64)
+                                .background(Color.blue)
+                                .cornerRadius(20)
                         }
-                    } label: {
-                        Text("計算する")
-                            .font(.system(size: 28, weight: .semibold, design: .rounded))
-                            .foregroundColor(.white)
-                            .frame(width: 220, height: 64)
-                            .background(Color.blue)
-                            .cornerRadius(20)
-                    }
-                    .buttonStyle(.plain)
+                        .buttonStyle(.plain)
 
-                    Button {
-                        showFactorTable = true
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "tablecells")
-                            Text("素因数表 1〜99")
+                        Button {
+                            showFactorTable = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "tablecells")
+                                Text("素因数表")
+                            }
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white)
+                            .frame(width: 110, height: 64)
+                            .background(Color.purple)
+                            .cornerRadius(20)
                         }
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
-                        .frame(width: 220, height: 48)
-                        .background(Color.purple)
-                        .cornerRadius(16)
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
 
                     if showDetail, let r = result {
                         StepByStepView(a: firstNumber, b: secondNumber, result: r)
