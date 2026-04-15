@@ -60,6 +60,21 @@ struct ContentView: View {
                         .buttonStyle(.plain)
                     }
 
+                    Button {
+                        showFactorTable = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "tablecells")
+                            Text("素因数表 1〜99")
+                        }
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white)
+                        .frame(width: 220, height: 48)
+                        .background(Color.purple)
+                        .cornerRadius(16)
+                    }
+                    .buttonStyle(.plain)
+
                     if showDetail, let r = result {
                         StepByStepView(a: firstNumber, b: secondNumber, result: r)
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
@@ -907,7 +922,9 @@ struct FactorCell: View {
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundColor(cellColor)
             Text(factorLabel(n))
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .font(isPrimeNumber(n)
+                    ? .system(size: 16, weight: .bold, design: .rounded)
+                    : .system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundColor(cellColor.opacity(0.85))
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
