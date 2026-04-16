@@ -257,6 +257,21 @@ struct MentalMathView: View {
         return min(a2 + b2, a5 + b5) > min(a2, a5) + min(b2, b5)
     }
 
+    // 方法⑦: ゾロ目（11の倍数）計算
+    var isZoromeA: Bool { a >= 11 && a % 11 == 0 && a / 11 <= 9 }
+    var isZoromeB: Bool { b >= 11 && b % 11 == 0 && b / 11 <= 9 }
+    var isZoromeApplicable: Bool { isZoromeA || isZoromeB }
+    var zoromeBase: Int  { isZoromeA ? a : b }   // ゾロ目の数
+    var zoromeOther: Int { isZoromeA ? b : a }   // 掛ける相手
+    var zoromeDigit: Int { zoromeBase / 11 }      // ゾロ目の一桁
+    var zoromeOther1: Int { zoromeOther / 10 }
+    var zoromeOther0: Int { zoromeOther % 10 }
+    var zoromeMidSum: Int { zoromeOther1 + zoromeOther0 }
+    var zoromeCarry: Int  { zoromeMidSum / 10 }
+    var zoromeMidDigit: Int { zoromeMidSum % 10 }
+    var zoromeX11: Int { 11 * zoromeOther }
+    private var zoromeBaseName: String { "\(zoromeDigit) × 11" }
+
     // キャッシュプロパティ（型推論コスト削減）
     private var factorsAStr: String { factorsA.map { String($0) }.joined(separator: " × ") }
     private var factorsBStr: String { factorsB.map { String($0) }.joined(separator: " × ") }
@@ -285,6 +300,7 @@ struct MentalMathView: View {
             method4Card
             if isFactorMethodApplicable { method5Card }
             if isRegroupApplicable { method6Card }
+            if isZoromeApplicable { method7Card }
         }
     }
 
@@ -540,6 +556,60 @@ struct MentalMathView: View {
                     Text("\(regroupedStr) = \(result)")
                         .font(.system(size: 16, weight: .bold, design: .monospaced))
                         .foregroundColor(.blue).minimumScaleFactor(0.65)
+                }
+            }
+        }
+    }
+
+    private var method7Card: some View {
+        MentalCard(title: "方法⑦　ゾロ目（11の倍数）で計算する") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("\(zoromeBase) = \(zoromeBaseName) なので、まず 11 × \(zoromeOther) を求める")
+                    .font(.system(size: 13)).foregroundColor(.secondary)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("【× 11 のコツ】十の位・(十+一)の位・一の位 と並べる")
+                        .font(.system(size: 12, weight: .semibold)).foregroundColor(.orange)
+                    HStack(spacing: 6) {
+                        Group {
+                            Text("\(zoromeOther1 + zoromeCarry)")
+                                .foregroundColor(.purple)
+                            Text(zoromeCarry > 0 ? "\(zoromeMidDigit)←繰上" : "\(zoromeMidDigit)")
+                                .foregroundColor(.orange)
+                            Text("\(zoromeOther0)")
+                                .foregroundColor(.red)
+                        }
+                        .font(.system(size: 22, weight: .bold, design: .monospaced))
+                        .frame(minWidth: 36)
+                        .padding(6)
+                        .background(Color(.secondarySystemBackground))
+                        .cornerRadius(8)
+                        Text("= \(zoromeX11)")
+                            .font(.system(size: 20, weight: .bold, design: .monospaced))
+                            .foregroundColor(.blue)
+                    }
+                    if zoromeCarry > 0 {
+                        Text("　十の位+一の位 = \(zoromeMidSum) なので十の位に1繰り上げ")
+                            .font(.system(size: 12)).foregroundColor(.secondary)
+                    }
+                }
+                .padding(10)
+                .background(Color.orange.opacity(0.06))
+                .cornerRadius(10)
+
+                MentalRow(circled: "①",
+                          formula: "11 × \(zoromeOther)",
+                          value: zoromeX11, color: .orange)
+                MentalRow(circled: "②",
+                          formula: "\(zoromeDigit) × \(zoromeX11)",
+                          value: result, color: .blue)
+                Divider()
+                HStack {
+                    Text("答え").font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                    Text("\(zoromeDigit) × \(zoromeX11) = \(result)")
+                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .foregroundColor(.blue)
                 }
             }
         }
