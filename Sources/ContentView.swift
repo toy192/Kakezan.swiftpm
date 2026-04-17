@@ -846,7 +846,7 @@ struct NumberInputView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            DigitSelector(label: "十", digit: tens, range: 1...9) { value = $0 * 10 + ones }
+            DigitSelector(label: "十", digit: tens, range: 0...9) { value = $0 * 10 + ones }
             DigitSelector(label: "一", digit: ones, range: 0...9) { value = tens * 10 + $0 }
         }
     }
