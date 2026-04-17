@@ -61,6 +61,9 @@ struct ContentView: View {
                     }
 
                     if showDetail, let r = result {
+                        HissanView(a: firstNumber, b: secondNumber, result: r)
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+
                         StepByStepView(a: firstNumber, b: secondNumber, result: r)
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
 
@@ -76,6 +79,91 @@ struct ContentView: View {
         .sheet(isPresented: $showFactorTable) {
             FactorTableView()
         }
+    }
+}
+
+// MARK: - 普通の筆算
+
+struct HissanView: View {
+    let a: Int, b: Int, result: Int
+
+    var b0: Int { b % 10 }
+    var b1: Int { b / 10 }
+    var p0: Int { a * b0 }
+    var p1: Int { a * b1 }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: "pencil.and.ruler.fill")
+                    .foregroundColor(.teal)
+                    .font(.title2)
+                Text("筆算")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.teal)
+            }
+
+            VStack(alignment: .trailing, spacing: 6) {
+                Text("\(a)")
+                    .font(.system(size: 36, weight: .bold, design: .monospaced))
+
+                HStack(spacing: 6) {
+                    Text("×")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.secondary)
+                    Text("\(b)")
+                        .font(.system(size: 36, weight: .bold, design: .monospaced))
+                }
+
+                Rectangle()
+                    .frame(height: 2)
+                    .foregroundColor(.primary.opacity(0.4))
+
+                // a × 一の位
+                HStack(spacing: 8) {
+                    Text("← \(a)×\(b0)")
+                        .font(.system(size: 12))
+                        .foregroundColor(.red.opacity(0.7))
+                    Text(b0 == 0 ? "0" : "\(p0)")
+                        .font(.system(size: 30, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.red)
+                }
+
+                // a × 十の位（シフト）
+                if b1 > 0 {
+                    HStack(spacing: 8) {
+                        Text("← \(a)×\(b1*10)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.blue.opacity(0.7))
+                        HStack(spacing: 0) {
+                            Text("\(p1)")
+                                .font(.system(size: 30, weight: .semibold, design: .monospaced))
+                                .foregroundColor(.blue)
+                            Text("0")
+                                .font(.system(size: 30, weight: .semibold, design: .monospaced))
+                                .foregroundColor(.blue.opacity(0.35))
+                        }
+                    }
+                }
+
+                Rectangle()
+                    .frame(height: 2)
+                    .foregroundColor(.primary.opacity(0.4))
+
+                Text("\(result)")
+                    .font(.system(size: 52, weight: .bold, design: .monospaced))
+                    .foregroundColor(.blue)
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(20)
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(14)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(Color(.systemBackground))
+        .cornerRadius(14)
+        .shadow(color: .black.opacity(0.06), radius: 5, x: 0, y: 2)
     }
 }
 
