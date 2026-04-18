@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var result: Int? = nil
     @State private var showDetail = false
     @State private var showFactorTable = false
+    @State private var showKukuTable = false
 
     var body: some View {
         ZStack {
@@ -28,34 +29,45 @@ struct ContentView: View {
                     .onChange(of: firstNumber) { _, _ in result = nil; showDetail = false }
                     .onChange(of: secondNumber) { _, _ in result = nil; showDetail = false }
 
-                    HStack(spacing: 16) {
-                        Button {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                                result = firstNumber * secondNumber
-                                showDetail = true
-                            }
-                        } label: {
-                            Text("計算する")
-                                .font(.system(size: 28, weight: .semibold, design: .rounded))
-                                .foregroundColor(.white)
-                                .frame(width: 220, height: 64)
-                                .background(Color.blue)
-                                .cornerRadius(20)
+                    Button {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                            result = firstNumber * secondNumber
+                            showDetail = true
                         }
-                        .buttonStyle(.plain)
+                    } label: {
+                        Text("計算する")
+                            .font(.system(size: 28, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white)
+                            .frame(width: 220, height: 64)
+                            .background(Color.blue)
+                            .cornerRadius(20)
+                    }
+                    .buttonStyle(.plain)
 
-                        Button {
-                            showFactorTable = true
-                        } label: {
+                    HStack(spacing: 12) {
+                        Button { showFactorTable = true } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: "tablecells")
                                 Text("素因数表")
                             }
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
                             .foregroundColor(.white)
-                            .frame(width: 110, height: 64)
+                            .frame(width: 150, height: 44)
                             .background(Color.purple)
-                            .cornerRadius(20)
+                            .cornerRadius(14)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button { showKukuTable = true } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "tablecells.fill")
+                                Text("九九の表")
+                            }
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white)
+                            .frame(width: 150, height: 44)
+                            .background(Color.orange)
+                            .cornerRadius(14)
                         }
                         .buttonStyle(.plain)
                     }
@@ -78,6 +90,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showFactorTable) {
             FactorTableView()
+        }
+        .sheet(isPresented: $showKukuTable) {
+            KukuTableView()
         }
     }
 }
@@ -1015,6 +1030,69 @@ private func factorLabel(_ n: Int) -> String {
         return "\(p)\(exp)"
     }
     return parts.joined(separator: "×")
+}
+
+// MARK: - 九九の表ビュー
+
+struct KukuTableView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    private let cols = Array(1...9)
+    private let rows = Array(1...9)
+
+    private func cellColor(_ v: Int) -> Color {
+        switch v {
+        case 1...9:   return .blue
+        case 10...35: return .teal
+        case 36...63: return .orange
+        default:      return .red
+        }
+    }
+
+    var body: some View {
+        NavigationView {
+            ScrollView([.horizontal, .vertical]) {
+                VStack(spacing: 2) {
+                    // ヘッダー行
+                    HStack(spacing: 2) {
+                        cell("×", fg: .white, bg: .gray)
+                        ForEach(cols, id: \.self) { c in
+                            cell("\(c)", fg: .white, bg: .gray.opacity(0.7))
+                        }
+                    }
+                    // データ行
+                    ForEach(rows, id: \.self) { r in
+                        HStack(spacing: 2) {
+                            cell("\(r)", fg: .white, bg: .gray.opacity(0.7))
+                            ForEach(cols, id: \.self) { c in
+                                let v = r * c
+                                cell("\(v)", fg: .white, bg: cellColor(v))
+                            }
+                        }
+                    }
+                }
+                .padding(16)
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("九九の表")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("閉じる") { dismiss() }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func cell(_ text: String, fg: Color, bg: Color) -> some View {
+        Text(text)
+            .font(.system(size: 18, weight: .bold, design: .monospaced))
+            .foregroundColor(fg)
+            .frame(width: 48, height: 48)
+            .background(bg)
+            .cornerRadius(8)
+    }
 }
 
 // MARK: - 素因数表ビュー
