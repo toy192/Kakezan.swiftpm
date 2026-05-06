@@ -880,10 +880,10 @@ struct SorobanView: View {
             Text("左の桁から順番に掛けて足していきます")
                 .font(.system(size: 13)).foregroundColor(.secondary)
 
-            sorobanStep(num: 1, formula: "\(a1)×\(b1)=\(s1)", hint: "百の位 +\(s1 * 100)", addVal: s1 * 100, before: 0,  after: t1)
-            sorobanStep(num: 2, formula: "\(a1)×\(b0)=\(s2)", hint: "十の位 +\(s2 * 10)",  addVal: s2 * 10, before: t1, after: t2)
-            sorobanStep(num: 3, formula: "\(a0)×\(b1)=\(s3)", hint: "十の位 +\(s3 * 10)",  addVal: s3 * 10, before: t2, after: t3)
-            sorobanStep(num: 4, formula: "\(a0)×\(b0)=\(s4)", hint: "一の位 +\(s4)",        addVal: s4,      before: t3, after: t4)
+            sorobanStep(num: 1, formula: "\(a1 * 10)×\(b1 * 10)=\(s1 * 100)", hint: "百の位", addVal: s1 * 100, before: 0,  after: t1)
+            sorobanStep(num: 2, formula: "\(a1 * 10)×\(b0)=\(s2 * 10)",       hint: "十の位", addVal: s2 * 10, before: t1, after: t2)
+            sorobanStep(num: 3, formula: "\(a0)×\(b1 * 10)=\(s3 * 10)",       hint: "十の位", addVal: s3 * 10, before: t2, after: t3)
+            sorobanStep(num: 4, formula: "\(a0)×\(b0)=\(s4)",                  hint: "一の位", addVal: s4,      before: t3, after: t4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
