@@ -102,83 +102,202 @@ struct ContentView: View {
 struct HissanView: View {
     let a: Int, b: Int, result: Int
 
+    var a0: Int { a % 10 }
+    var a1: Int { a / 10 }
     var b0: Int { b % 10 }
     var b1: Int { b / 10 }
+
+    // a × b0 の内訳
     var p0: Int { a * b0 }
+    var p0_a0b0: Int { a0 * b0 }
+    var p0_ones: Int { p0_a0b0 % 10 }
+    var p0_carry: Int { p0_a0b0 / 10 }
+    var p0_upper: Int { a1 * b0 + p0_carry }
+
+    // a × b1 の内訳
     var p1: Int { a * b1 }
+    var p1_a0b1: Int { a0 * b1 }
+    var p1_ones: Int { p1_a0b1 % 10 }
+    var p1_carry: Int { p1_a0b1 / 10 }
+    var p1_upper: Int { a1 * b1 + p1_carry }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
                 Image(systemName: "pencil.and.ruler.fill")
-                    .foregroundColor(.teal)
-                    .font(.title2)
+                    .foregroundColor(.teal).font(.title2)
                 Text("筆算")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.teal)
+                    .font(.system(size: 20, weight: .bold)).foregroundColor(.teal)
             }
 
-            VStack(alignment: .trailing, spacing: 6) {
+            // 筆算の全体像
+            VStack(alignment: .trailing, spacing: 4) {
                 Text("\(a)")
-                    .font(.system(size: 36, weight: .bold, design: .monospaced))
-
+                    .font(.system(size: 34, weight: .bold, design: .monospaced))
                 HStack(spacing: 6) {
-                    Text("×")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.secondary)
-                    Text("\(b)")
-                        .font(.system(size: 36, weight: .bold, design: .monospaced))
+                    Text("×").font(.system(size: 26, weight: .bold)).foregroundColor(.secondary)
+                    Text("\(b)").font(.system(size: 34, weight: .bold, design: .monospaced))
                 }
-
-                Rectangle()
-                    .frame(height: 2)
-                    .foregroundColor(.primary.opacity(0.4))
-
-                // a × 一の位
-                HStack(spacing: 8) {
-                    Text("← \(a)×\(b0)")
-                        .font(.system(size: 12))
-                        .foregroundColor(.red.opacity(0.7))
+                Rectangle().frame(height: 2).foregroundColor(.primary.opacity(0.35))
+                HStack(spacing: 0) {
+                    Text("  ").font(.system(size: 28, design: .monospaced))
                     Text(b0 == 0 ? "0" : "\(p0)")
-                        .font(.system(size: 30, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 28, weight: .semibold, design: .monospaced))
                         .foregroundColor(.red)
                 }
-
-                // a × 十の位（シフト）
                 if b1 > 0 {
-                    HStack(spacing: 8) {
-                        Text("← \(a)×\(b1*10)")
-                            .font(.system(size: 12))
-                            .foregroundColor(.blue.opacity(0.7))
-                        HStack(spacing: 0) {
-                            Text("\(p1)")
-                                .font(.system(size: 30, weight: .semibold, design: .monospaced))
-                                .foregroundColor(.blue)
-                            Text("0")
-                                .font(.system(size: 30, weight: .semibold, design: .monospaced))
-                                .foregroundColor(.blue.opacity(0.35))
+                    HStack(spacing: 0) {
+                        Text("\(p1)")
+                            .font(.system(size: 28, weight: .semibold, design: .monospaced))
+                            .foregroundColor(.blue)
+                        Text("0")
+                            .font(.system(size: 28, weight: .semibold, design: .monospaced))
+                            .foregroundColor(.blue.opacity(0.3))
+                    }
+                }
+                Rectangle().frame(height: 2).foregroundColor(.primary.opacity(0.35))
+                Text("\(result)")
+                    .font(.system(size: 44, weight: .bold, design: .monospaced))
+                    .foregroundColor(.blue)
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(16)
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(12)
+
+            // STEP 1: b0 を掛ける
+            StepCard(number: 1, title: "一の位「\(b0)」を掛ける") {
+                VStack(alignment: .leading, spacing: 10) {
+                    // a0 × b0
+                    hissanCalcRow(
+                        label: "一の位どうし：\(a0) × \(b0) = \(p0_a0b0)",
+                        carry: p0_carry,
+                        onesResult: p0_ones,
+                        color: .red
+                    )
+                    // a1 × b0 + carry（a1 > 0 のとき）
+                    if a1 > 0 {
+                        let carryNote = p0_carry > 0 ? " ＋ \(p0_carry)（繰り上がり）" : ""
+                        HStack {
+                            Text("十の位どうし：\(a1) × \(b0)\(carryNote) = \(p0_upper)")
+                                .font(.system(size: 14, design: .monospaced))
+                                .foregroundColor(.secondary)
+                                .minimumScaleFactor(0.7)
+                            Spacer()
+                            Text("→ \(p0_upper)")
+                                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                                .foregroundColor(.red)
+                        }
+                    }
+                    Divider()
+                    HStack {
+                        Text("小計").font(.system(size: 14, weight: .semibold))
+                        Spacer()
+                        Text("\(a) × \(b0) = \(p0)")
+                            .font(.system(size: 18, weight: .bold, design: .monospaced))
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+
+            // STEP 2: b1 を掛ける（b1 > 0 のとき）
+            if b1 > 0 {
+                StepCard(number: 2, title: "十の位「\(b1)」を掛けて1桁ずらす") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        hissanCalcRow(
+                            label: "一の位どうし：\(a0) × \(b1) = \(p1_a0b1)",
+                            carry: p1_carry,
+                            onesResult: p1_ones,
+                            color: .blue
+                        )
+                        if a1 > 0 {
+                            let carryNote = p1_carry > 0 ? " ＋ \(p1_carry)（繰り上がり）" : ""
+                            HStack {
+                                Text("十の位どうし：\(a1) × \(b1)\(carryNote) = \(p1_upper)")
+                                    .font(.system(size: 14, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .minimumScaleFactor(0.7)
+                                Spacer()
+                                Text("→ \(p1_upper)")
+                                    .font(.system(size: 18, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        Divider()
+                        HStack {
+                            Text("小計（×10）").font(.system(size: 14, weight: .semibold))
+                            Spacer()
+                            HStack(spacing: 0) {
+                                Text("\(a) × \(b1) = \(p1)  →  ")
+                                    .font(.system(size: 15, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                Text("\(p1)")
+                                    .font(.system(size: 18, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.blue)
+                                Text("0")
+                                    .font(.system(size: 18, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.blue.opacity(0.4))
+                            }
                         }
                     }
                 }
 
-                Rectangle()
-                    .frame(height: 2)
-                    .foregroundColor(.primary.opacity(0.4))
-
-                Text("\(result)")
-                    .font(.system(size: 52, weight: .bold, design: .monospaced))
-                    .foregroundColor(.blue)
+                // STEP 3: 足し合わせる
+                StepCard(number: 3, title: "足し合わせる") {
+                    VStack(spacing: 8) {
+                        HStack {
+                            Text("一の位の積").font(.system(size: 14)).foregroundColor(.secondary)
+                            Spacer()
+                            Text("\(p0)")
+                                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                                .foregroundColor(.red)
+                        }
+                        HStack {
+                            Text("十の位の積").font(.system(size: 14)).foregroundColor(.secondary)
+                            Spacer()
+                            Text("\(p1 * 10)")
+                                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                                .foregroundColor(.blue)
+                        }
+                        Divider()
+                        HStack {
+                            Text("合計").font(.system(size: 15, weight: .semibold))
+                            Spacer()
+                            Text("\(p0) ＋ \(p1 * 10) = \(result)")
+                                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                                .foregroundColor(.blue)
+                                .minimumScaleFactor(0.7)
+                        }
+                    }
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding(20)
-            .background(Color(.secondarySystemBackground))
-            .cornerRadius(14)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
         .background(Color(.systemBackground))
         .cornerRadius(14)
         .shadow(color: .black.opacity(0.06), radius: 5, x: 0, y: 2)
+    }
+
+    @ViewBuilder
+    private func hissanCalcRow(label: String, carry: Int, onesResult: Int, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(label)
+                    .font(.system(size: 14, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .minimumScaleFactor(0.7)
+                Spacer()
+                Text("→ \(onesResult)")
+                    .font(.system(size: 18, weight: .bold, design: .monospaced))
+                    .foregroundColor(color)
+            }
+            if carry > 0 {
+                Text("　一の位: \(onesResult)、繰り上がり: \(carry) を次の桁へ")
+                    .font(.system(size: 12))
+                    .foregroundColor(color.opacity(0.75))
+            }
+        }
     }
 }
 
