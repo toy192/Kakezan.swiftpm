@@ -165,7 +165,7 @@ struct HissanView: View {
             .cornerRadius(12)
 
             // STEP 1: b0 を掛ける
-            StepCard(number: 1, title: "一の位「\(b0)」を掛ける") {
+            StepCard(number: 1, title: "「\(b0)」を掛ける") {
                 VStack(alignment: .leading, spacing: 10) {
                     // a0 × b0
                     calcRow(
@@ -200,7 +200,7 @@ struct HissanView: View {
 
             // STEP 2: b1 を掛ける
             if b1 > 0 {
-                StepCard(number: 2, title: "十の位「\(b1)」を掛けて1桁ずらす") {
+                StepCard(number: 2, title: "「\(b1)」を掛けて1桁ずらす") {
                     VStack(alignment: .leading, spacing: 10) {
                         // a0 × b1
                         calcRow(
