@@ -81,6 +81,9 @@ struct ContentView: View {
 
                         MentalMathView(a: firstNumber, b: secondNumber, result: r)
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
+
+                        SorobanView(a: firstNumber, b: secondNumber, result: r)
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
 
                     Spacer(minLength: 40)
@@ -837,6 +840,157 @@ struct MentalMathView: View {
                         .foregroundColor(.blue)
                 }
             }
+        }
+    }
+}
+
+// MARK: - そろばん
+
+struct SorobanView: View {
+    let a: Int
+    let b: Int
+    let result: Int
+
+    var a0: Int { a % 10 }
+    var a1: Int { a / 10 }
+    var b0: Int { b % 10 }
+    var b1: Int { b / 10 }
+
+    var s1: Int { a1 * b1 }
+    var s2: Int { a1 * b0 }
+    var s3: Int { a0 * b1 }
+    var s4: Int { a0 * b0 }
+
+    var t1: Int { s1 * 100 }
+    var t2: Int { t1 + s2 * 10 }
+    var t3: Int { t2 + s3 * 10 }
+    var t4: Int { t3 + s4 }
+
+    private let brownColor = Color(red: 0.5, green: 0.3, blue: 0.1)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: "align.vertical.bottom.fill")
+                    .foregroundColor(brownColor).font(.title2)
+                Text("そろばん")
+                    .font(.system(size: 20, weight: .bold)).foregroundColor(brownColor)
+            }
+
+            Text("左の桁から順番に掛けて足していきます")
+                .font(.system(size: 13)).foregroundColor(.secondary)
+
+            sorobanStep(num: 1, formula: "\(a1)×\(b1)=\(s1)", hint: "百の位 +\(s1 * 100)", addVal: s1 * 100, before: 0,  after: t1)
+            sorobanStep(num: 2, formula: "\(a1)×\(b0)=\(s2)", hint: "十の位 +\(s2 * 10)",  addVal: s2 * 10, before: t1, after: t2)
+            sorobanStep(num: 3, formula: "\(a0)×\(b1)=\(s3)", hint: "十の位 +\(s3 * 10)",  addVal: s3 * 10, before: t2, after: t3)
+            sorobanStep(num: 4, formula: "\(a0)×\(b0)=\(s4)", hint: "一の位 +\(s4)",        addVal: s4,      before: t3, after: t4)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(Color(.systemBackground))
+        .cornerRadius(14)
+        .shadow(color: .black.opacity(0.06), radius: 5, x: 0, y: 2)
+    }
+
+    @ViewBuilder
+    private func sorobanStep(num: Int, formula: String, hint: String, addVal: Int, before: Int, after: Int) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text("STEP \(num)")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(brownColor)
+                    .cornerRadius(8)
+                Text(formula)
+                    .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                Text("（\(hint)）")
+                    .font(.system(size: 13)).foregroundColor(.secondary)
+            }
+            HStack(spacing: 12) {
+                Spacer()
+                SorobanAbacus(value: before)
+                Image(systemName: "arrow.right")
+                    .foregroundColor(brownColor).font(.title2)
+                SorobanAbacus(value: after)
+                Spacer()
+            }
+        }
+        .padding(12)
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(12)
+    }
+}
+
+struct SorobanAbacus: View {
+    let value: Int
+
+    private var digits: [Int] {
+        [(value / 1000) % 10, (value / 100) % 10, (value / 10) % 10, value % 10]
+    }
+    private let labels = ["千", "百", "十", "一"]
+    private let brownColor = Color(red: 0.5, green: 0.3, blue: 0.1)
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<4, id: \.self) { i in
+                VStack(spacing: 3) {
+                    SorobanBeadColumn(digit: digits[i])
+                    Text(labels[i])
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(brownColor)
+                }
+            }
+        }
+        .padding(.horizontal, 8).padding(.vertical, 8)
+        .background(Color(red: 0.96, green: 0.88, blue: 0.76))
+        .cornerRadius(8)
+        .overlay(RoundedRectangle(cornerRadius: 8)
+            .stroke(Color(red: 0.6, green: 0.4, blue: 0.2), lineWidth: 1.5))
+    }
+}
+
+struct SorobanBeadColumn: View {
+    let digit: Int
+
+    private let beadW: CGFloat = 20
+    private let beadH: CGFloat = 13
+    private let sp: CGFloat = 3
+    private let activeColor   = Color(red: 0.45, green: 0.22, blue: 0.05)
+    private let inactiveColor = Color(red: 0.78, green: 0.65, blue: 0.52)
+    private let beamColor     = Color(red: 0.35, green: 0.18, blue: 0.04)
+
+    var fiveActive: Bool { digit >= 5 }
+    var unitActive: Int  { digit % 5 }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Five-bead (above beam)
+            VStack(spacing: 0) {
+                if fiveActive { Spacer(minLength: 0) }
+                Ellipse()
+                    .fill(fiveActive ? activeColor : inactiveColor)
+                    .frame(width: beadW, height: beadH)
+                if !fiveActive { Spacer(minLength: 0) }
+            }
+            .frame(width: beadW, height: beadH + 12)
+
+            // Beam
+            Rectangle()
+                .fill(beamColor)
+                .frame(width: beadW + 6, height: 3)
+
+            // Unit beads (below beam)
+            VStack(spacing: sp) {
+                ForEach(0..<unitActive, id: \.self) { _ in
+                    Ellipse().fill(activeColor).frame(width: beadW, height: beadH)
+                }
+                Spacer(minLength: 0)
+                ForEach(0..<(4 - unitActive), id: \.self) { _ in
+                    Ellipse().fill(inactiveColor).frame(width: beadW, height: beadH)
+                }
+            }
+            .frame(width: beadW, height: (beadH + sp) * 4 + 4)
         }
     }
 }
