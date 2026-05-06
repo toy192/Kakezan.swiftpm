@@ -877,7 +877,7 @@ struct SorobanView: View {
                     .font(.system(size: 20, weight: .bold)).foregroundColor(brownColor)
             }
 
-            Text("左の桁から順番に掛けて足していきます")
+            Text("十の位と一の位に分けてそれぞれ別に掛け算を計算して足していきます")
                 .font(.system(size: 13)).foregroundColor(.secondary)
 
             sorobanStep(num: 1, formula: "\(a1 * 10)×\(b1 * 10)=\(s1 * 100)", hint: "百の位", addVal: s1 * 100, before: 0,  after: t1)
