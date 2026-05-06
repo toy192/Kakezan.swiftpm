@@ -179,7 +179,7 @@ struct HissanView: View {
                     if a1 > 0 {
                         let carryNote = p0_carry > 0 ? " ＋ \(p0_carry)（繰り上がり）" : ""
                         HStack {
-                            Text("十の位どうし：\(a1) × \(b0)\(carryNote) = \(p0_upper)")
+                            Text("a の十の位：\(a1) × \(b0)\(carryNote) = \(p0_upper)")
                                 .font(.system(size: 14, design: .monospaced))
                                 .foregroundColor(.secondary)
                                 .minimumScaleFactor(0.7)
@@ -213,7 +213,7 @@ struct HissanView: View {
                         if a1 > 0 {
                             let carryNote = p1_carry > 0 ? " ＋ \(p1_carry)（繰り上がり）" : ""
                             HStack {
-                                Text("十の位どうし：\(a1) × \(b1)\(carryNote) = \(p1_upper)")
+                                Text("a の十の位：\(a1) × \(b1)\(carryNote) = \(p1_upper)")
                                     .font(.system(size: 14, design: .monospaced))
                                     .foregroundColor(.secondary)
                                     .minimumScaleFactor(0.7)
