@@ -935,6 +935,9 @@ struct SorobanAbacus: View {
         HStack(spacing: 4) {
             ForEach(0..<4, id: \.self) { i in
                 VStack(spacing: 3) {
+                    Text("\(digits[i])")
+                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                        .foregroundColor(digits[i] > 0 ? brownColor : Color(red: 0.78, green: 0.65, blue: 0.52))
                     SorobanBeadColumn(digit: digits[i])
                     Text(labels[i])
                         .font(.system(size: 10, weight: .bold))
